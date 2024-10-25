@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "tensorflow/core/kernels/cwise_ops_common.h"
+#include "third_party/ktfop/math/BinaryOp.h"
 
 namespace tensorflow {
 REGISTER2(BinaryOp, CPU, "FloorMod", functor::safe_floor_mod, int32, int64);

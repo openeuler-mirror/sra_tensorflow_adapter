@@ -11,6 +11,7 @@ def tflite_copts():
     """Defines compile time flags."""
     copts = [
         "-DFARMHASH_NO_CXX_STRING",
+	    "-flax-vector-conversions",
     ] + select({
         str(Label("//tensorflow:android_arm64")): [
             "-O3",

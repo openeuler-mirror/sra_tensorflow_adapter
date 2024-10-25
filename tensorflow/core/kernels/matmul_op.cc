@@ -24,6 +24,9 @@ limitations under the License.
 #include "tensorflow/core/framework/register_types.h"
 #include "tensorflow/core/kernels/fill_functor.h"
 #include "tensorflow/core/util/matmul_autotune.h"
+
+#include "third_party/ktfop/include/ktfop.h"
+
 #if GOOGLE_CUDA
 #include "third_party/gpus/cuda/include/cuda.h"
 #endif
@@ -147,6 +150,35 @@ struct LaunchMatMulCPU : LaunchMatMulBase<CPUDevice, T> {};
 
 template <typename T, bool USE_CUBLAS>
 struct LaunchMatMul<CPUDevice, T, USE_CUBLAS> : public LaunchMatMulCPU<T> {};
+
+template <bool USE_CUBLAS>
+struct LaunchMatMul<CPUDevice, float, USE_CUBLAS> {
+    static void launch(
+            OpKernelContext* ctx, const Tensor& a, const Tensor& b,
+            const Eigen::array<Eigen::IndexPair<Eigen::DenseIndex>, 1>& dim_pair,
+            std::vector<int64>* algorithms, bool use_autotune, Tensor* out)
+    {
+        CBLAS_TRANSPOSE trans[] = {CBLAS_TRANSPOSE::CblasNoTrans, CBLAS_TRANSPOSE::CblasTrans};
+        const uint64 m = a.dim_size(0);
+        const uint64 k = a.dim_size(1);
+        const uint64 n = b.dim_size(1);
+        bool transpose_a = dim_pair[0].first == 0;
+        bool transpose_b = dim_pair[0].second == 1;
+        auto blas_transpose_a = trans[transpose_a];
+        auto blas_transpose_b = trans[transpose_b];
+
+        auto a_ptr = const_cast<float*>(a.flat<float>().data());
+        auto b_ptr = const_cast<float*>(b.flat<float>().data());
+        auto c_ptr = out->flat<float>().data();
+        auto alpha = static_cast<float>(1.0);
+        auto beta = static_cast<float>(0.0);
+        ktfop::MatMulParams<float> mp(CblasColMajor, blas_transpose_b, blas_transpose_a, n, m, k, alpha, n, k, beta, n);
+        ktfop::Matmul<float>(b_ptr, a_ptr, c_ptr, mp);
+    }
+    static void GetBlasGemmAlgorithm(OpKernelConstruction *ctx, std::vector<int64> *algorithms,
+                                     bool *algorithm_set_flag)
+    {}
+};
 
 #ifdef TENSORFLOW_USE_SYCL
 template <typename T>

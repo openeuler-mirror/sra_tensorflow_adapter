@@ -2521,7 +2521,7 @@ tf_kernel_library(
 tf_kernel_library(
     name = "lookup_table_op",
     prefix = "lookup_table_op",
-    deps = LOOKUP_DEPS,
+    deps = LOOKUP_DEPS+["//third_party/ktfop:libktfop"],
 )
 
 cc_library(
@@ -3751,7 +3751,7 @@ tf_kernel_library(
 tf_kernel_library(
     name = "cwise_op",
     prefix = "cwise_op",
-    deps = MATH_DEPS,
+    deps = MATH_DEPS+["//third_party/ktfop:libktfop"],
 )
 
 tf_kernel_library(
@@ -3795,7 +3795,7 @@ tf_kernel_library(
         "//conditions:default": [],
     }) + mkl_deps() + if_cuda([
         "//tensorflow/core/platform/default/build_config:cublas_plugin",
-    ]),
+    ]) + ["//third_party/ktfop:libktfop"],
 )
 
 tf_mkl_kernel_library(
