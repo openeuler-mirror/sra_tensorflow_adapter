@@ -44,7 +44,7 @@ def is_free_function(py_object, full_name, index):
     index: The {full_name:py_object} dictionary for the public API.
 
   Returns:
-    True if the obeject is a stand-alone function, and not part of a class
+    True if the object is a stand-alone function, and not part of a class
     definition.
   """
   if not tf_inspect.isfunction(py_object):
