@@ -327,6 +327,7 @@ StatusOr<xla::ExecutionOutput> RunExecutable(
   run_options.set_allocator(allocator);
   run_options.set_intra_op_thread_pool(&ctx->eigen_cpu_device());
   run_options.set_rng_seed(GetXLARandomSeed());
+  run_options.set_run_in_tf_kernel(ctx->executor_policy() == ExecutorPolicy::USE_BATCH_SCHEDULING_EXECUTOR);
 
   StatusOr<xla::ExecutionOutput> execution_output;
   bool run_synchronous =

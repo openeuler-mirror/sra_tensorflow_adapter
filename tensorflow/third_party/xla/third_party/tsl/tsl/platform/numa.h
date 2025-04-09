@@ -32,6 +32,11 @@ int NUMANumNodes();
 
 static const int kNUMANoAffinity = -1;
 
+enum ThreadAffinity {
+  OFF,
+  ORDER,
+  INTERVAL
+};
 // If possible sets affinity of the current thread to the specified NUMA node.
 // If node == kNUMANoAffinity removes affinity to any particular node.
 void NUMASetThreadNodeAffinity(int node);

@@ -638,33 +638,38 @@ StatusOr<ExecutionOutput> CpuExecutable::ExecuteAsyncOnStream(
       ExecutionOutput result,
       CreateResultShapedBuffer(run_options, absl::MakeSpan(buffers),
                                absl::MakeSpan(arguments)));
+  if (run_options->run_options().run_in_tf_kernel()) {
+    std::shared_ptr<std::vector<MaybeOwningDeviceMemory>> task_buffers =
+        std::make_shared<std::vector<MaybeOwningDeviceMemory>>(std::move(buffers));
+    (void)this->ExecuteComputeFunction(
+        &run_options->run_options(), *task_buffers, hlo_execution_profile);
+  } else {
+    // Logically we want this lambda to capture `buffers` by move, ultimately our
+    // functor needs to be wrapped in an std::function, and that requires its
+    // functor to be copyable.  Thus we perpetrate the hack of capturing buffers
+    // "by shared pointer".
+    //
+    // We also need to change the types of some of the variables we capture:
+    // run_options needs to change from a pointer to a value type, and arguments
+    // needs to change from a Span into a vector.  We use a struct instead
+    // of a lambda to make this explicit.
+    struct AsyncRunTask {
+      CpuExecutable* executable;
+      ServiceExecutableRunOptions run_options;
+      std::shared_ptr<std::vector<MaybeOwningDeviceMemory>> task_buffers;
+      HloExecutionProfile* hlo_execution_profile;
 
-  // Logically we want this lambda to capture `buffers` by move, ultimately our
-  // functor needs to be wrapped in an std::function, and that requires its
-  // functor to be copyable.  Thus we perpetrate the hack of capturing buffers
-  // "by shared pointer".
-  //
-  // We also need to change the types of some of the variables we capture:
-  // run_options needs to change from a pointer to a value type, and arguments
-  // needs to change from a Span into a vector.  We use a struct instead
-  // of a lambda to make this explicit.
-  struct AsyncRunTask {
-    CpuExecutable* executable;
-    ServiceExecutableRunOptions run_options;
-    std::shared_ptr<std::vector<MaybeOwningDeviceMemory>> task_buffers;
-    HloExecutionProfile* hlo_execution_profile;
-
-    Status operator()() {
-      return executable->ExecuteComputeFunction(
-          &run_options.run_options(), *task_buffers, hlo_execution_profile);
-    }
-  };
-  host_stream->EnqueueTaskWithStatus(
-      AsyncRunTask{this, *run_options,
-                   std::make_shared<std::vector<MaybeOwningDeviceMemory>>(
-                       std::move(buffers)),
-                   hlo_execution_profile});
-
+      Status operator()() {
+        return executable->ExecuteComputeFunction(
+            &run_options.run_options(), *task_buffers, hlo_execution_profile);
+      }
+    };
+    host_stream->EnqueueTaskWithStatus(
+        AsyncRunTask{this, *run_options,
+                    std::make_shared<std::vector<MaybeOwningDeviceMemory>>(
+                        std::move(buffers)),
+                    hlo_execution_profile});
+  }
   MarkToBeReleasedArguments(absl::MakeSpan(arguments), result);
   return std::move(result);
 }

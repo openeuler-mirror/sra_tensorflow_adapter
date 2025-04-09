@@ -124,6 +124,7 @@ class Executor {
     // If true, all kernels will be treated as "inexpensive", and hence executed
     // on the scheduling thread.
     bool run_all_kernels_inline = false;
+    ExecutorPolicy executor_policy = ExecutorPolicy::USE_NORMAL_EXECUTOR;
   };
   typedef std::function<void(const Status&)> DoneCallback;
 

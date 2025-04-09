@@ -17,6 +17,7 @@ limitations under the License.
 #define TENSORFLOW_CORE_COMMON_RUNTIME_NEXT_PLUGGABLE_DEVICE_FLAGS_H_
 
 #include "absl/flags/declare.h"
+#include "absl/flags/flag.h"
 
 ABSL_DECLARE_FLAG(bool, next_pluggable_device_use_c_api);
 

@@ -171,6 +171,10 @@ class ExecutableRunOptions {
   ExecutableRunOptions& set_rng_seed(int rng_seed);
   int rng_seed() const;
 
+  ExecutableRunOptions& set_run_in_tf_kernel(bool run_in_tf_kernel);
+
+  bool run_in_tf_kernel() const;
+
   ExecutableRunOptions& set_launch_id(int32_t launch_id) {
     launch_id_ = launch_id;
     return *this;
@@ -224,6 +228,7 @@ class ExecutableRunOptions {
   const Eigen::ThreadPoolDevice* intra_op_thread_pool_ = nullptr;
   ExecutionProfile* execution_profile_ = nullptr;
   int rng_seed_ = 0;
+  bool run_in_tf_kernel_ = false;
   int32_t launch_id_ = 0;
   stream_executor::Stream* device_to_host_stream_ = nullptr;
   stream_executor::Stream* host_to_device_stream_ = nullptr;

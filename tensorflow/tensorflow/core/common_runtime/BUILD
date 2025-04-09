@@ -639,6 +639,18 @@ cc_library(
 )
 
 cc_library(
+    name = "kernel_stat",
+    hdrs = ["kernel_stat.h"],
+    copts = tf_copts(),
+    deps = [
+        ":graph_view",
+        "//tensorflow/core:graph",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib",
+    ],
+)
+
+cc_library(
     name = "executor",
     srcs = ["executor.cc"],
     hdrs = ["executor.h"],
@@ -649,6 +661,7 @@ cc_library(
         ":entry",
         ":executor_factory",
         ":graph_view",
+        ":kernel_stat",
         ":immutable_executor_state",
         ":local_executor_params",
         ":pending_counts",

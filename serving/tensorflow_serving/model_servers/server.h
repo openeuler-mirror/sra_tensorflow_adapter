@@ -105,6 +105,8 @@ class Server {
     bool skip_initialize_tpu = false;
     // Misc GRPC features
     bool enable_grpc_healthcheck_service = false;
+    bool batch_op_scheduling = false;
+    tensorflow::string task_affinity_isolation = "0";
     Options();
   };
 

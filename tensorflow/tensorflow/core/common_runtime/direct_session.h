@@ -437,6 +437,7 @@ class DirectSession : public Session {
   // Otherwise run in global thread pool, session owned thread pool or handler
   // pool according to other specifications of RunOptions and ConfigProto.
   bool run_in_caller_thread_ = false;
+  bool use_batch_scheduling_executor_ = false;
 
   DirectSession(const DirectSession&) = delete;
   void operator=(const DirectSession&) = delete;

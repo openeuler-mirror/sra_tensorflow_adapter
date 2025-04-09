@@ -131,6 +131,13 @@ ExecutableRunOptions& ExecutableRunOptions::set_rng_seed(int rng_seed) {
 
 int ExecutableRunOptions::rng_seed() const { return rng_seed_; }
 
+ExecutableRunOptions& ExecutableRunOptions::set_run_in_tf_kernel(bool run_in_tf_kernel) {
+  run_in_tf_kernel_ = run_in_tf_kernel;
+  return *this;
+}
+
+bool ExecutableRunOptions::run_in_tf_kernel() const { return run_in_tf_kernel_; }
+
 ExecutableRunOptions& ExecutableRunOptions::set_run_id(RunId id) {
   run_id_ = id;
   return *this;

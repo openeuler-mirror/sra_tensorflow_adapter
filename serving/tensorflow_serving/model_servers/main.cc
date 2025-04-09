@@ -302,7 +302,14 @@ int main(int argc, char** argv) {
                        "Whether to skip auto initializing TPU."),
       tensorflow::Flag("enable_grpc_healthcheck_service",
                        &options.enable_grpc_healthcheck_service,
-                       "Enable the standard gRPC healthcheck service.")};
+                       "Enable the standard gRPC healthcheck service."),
+      tensorflow::Flag("batch_op_scheduling",
+                       &options.batch_op_scheduling,
+                       "Enable thread and schedule optimization for Kunpeng 920 CPU(default off)."),
+      tensorflow::Flag("task_affinity_isolation",
+                       &options.task_affinity_isolation,
+                       "Enable set thread affinity to isolate grpc and tensorflow thread."
+                       "('0': off, '1;0-79;75': order, '2;0-79': interval).")};
 
   const auto& usage = tensorflow::Flags::Usage(argv[0], flag_list);
   if (!tensorflow::Flags::Parse(&argc, argv, flag_list)) {

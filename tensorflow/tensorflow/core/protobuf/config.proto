@@ -17,6 +17,13 @@ option java_multiple_files = true;
 option java_package = "org.tensorflow.framework";
 option go_package = "github.com/tensorflow/tensorflow/tensorflow/go/core/protobuf/for_core_protos_go_proto";
 
+enum ExecutorPolicy {
+  // Tensorflow default executor
+  USE_NORMAL_EXECUTOR = 0;
+  // Kunpeng batch scheduling executor
+  USE_BATCH_SCHEDULING_EXECUTOR = 1;
+}
+
 message GPUOptions {
   // Fraction of the total GPU memory to allocate for each process.
   // 1 means to allocate all of the GPU memory, 0.5 means the process
@@ -716,7 +723,8 @@ message ConfigProto {
 
   Experimental experimental = 16;
 
-  // Next: 18
+  bool use_batch_op_scheduling = 18;
+  // Next: 19
 }
 
 // Options for a single Run() call.

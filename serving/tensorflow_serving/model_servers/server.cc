@@ -176,6 +176,121 @@ void Server::PollFilesystemAndReloadConfig(const string& config_file_path) {
   }
 }
 
+struct ThreadAffinityArgument {
+  tensorflow::port::ThreadAffinity thread_affinity = tensorflow::port::ThreadAffinity::OFF;
+  int start_core = 0;
+  int end_core = 0;
+  int nums_tf_core = 0;
+};
+
+static int get_available_cpu_nums() {
+  cpu_set_t cs;
+  CPU_ZERO(&cs);
+  sched_getaffinity(0, sizeof(cs), &cs);
+
+  int count = 0;
+  for (int i = 0; i < CPU_SETSIZE; ++i) {
+    if (CPU_ISSET(i, &cs)) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+tensorflow::Status ParseThreadAffinityConfig(tensorflow::string affinity_config,
+                                             ThreadAffinityArgument& args) {
+  std::stringstream ss(affinity_config);
+  std::string part;
+  std::vector<std::string> parts;
+
+  while (std::getline(ss, part, ';')) {
+    parts.push_back(part);
+  }
+
+  if (parts.size() < 1) {
+    return errors::InvalidArgument("Invalid input format. Expected at least affinity mode.");
+  }
+
+  int mode = std::stoi(parts[0]);
+  if (mode < 0 || mode > 2) {
+    return errors::InvalidArgument("Invalid input format. Affinity mode only support 0/1/2.");
+  }
+  args.thread_affinity = static_cast<tensorflow::port::ThreadAffinity>(mode);
+  if (args.thread_affinity == tensorflow::port::ThreadAffinity::OFF) {
+    return tensorflow::OkStatus();
+  }
+
+  if (parts.size() < 2) {
+    return errors::InvalidArgument("Invalid input format. Expected range when affinity mode is 1/2.");
+  }
+  std::string range = parts[1];
+  size_t dash_pos = range.find('-');
+  if (dash_pos == std::string::npos) {
+    return errors::InvalidArgument("Invalid input format. Expected n-m.");
+  }
+  args.start_core = std::stoi(range.substr(0, dash_pos));
+  args.end_core = std::stoi(range.substr(dash_pos + 1));
+
+  if (args.start_core > args.end_core) {
+    return errors::InvalidArgument("Invalid input format. Expected n-m, n<=m.");
+  }
+
+  int total_cores = args.end_core - args.start_core + 1;
+  if (get_available_cpu_nums() < total_cores) {
+    return errors::InvalidArgument("Invalid input format. available cpu num less than total cores.");
+  }
+  if (args.thread_affinity == tensorflow::port::ThreadAffinity::INTERVAL) {
+    return tensorflow::OkStatus();
+  }
+
+  if (parts.size() < 3) {
+    return errors::InvalidArgument("Invalid input format. Expected tf cores num when affinity mode is 1.");
+  }
+  args.nums_tf_core = std::stoi(parts[2]);
+  if (args.nums_tf_core > (args.end_core - args.start_core + 1)) {
+    return errors::InvalidArgument("Invalid input format. Expected k < total cores.");
+  }
+  return tensorflow::OkStatus();
+}
+
+void SetThreadAffinityBeforeServerCreate(ThreadAffinityArgument args) {
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  if (args.thread_affinity == tensorflow::port::ThreadAffinity::INTERVAL) {
+    for (int cpu = args.start_core; cpu <= args.end_core; cpu++) {
+      if (cpu % 2 == 0) {
+        CPU_SET(cpu, &cpuset);
+      }
+    }
+  } else if (args.thread_affinity == tensorflow::port::ThreadAffinity::ORDER) {
+    for (int cpu = args.start_core; cpu < args.start_core + args.nums_tf_core; cpu++) {
+      CPU_SET(cpu, &cpuset);
+    }
+  }
+  if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset) != 0) {
+    LOG(WARNING) << std::this_thread::get_id() << " set affinity failed";
+  }
+}
+
+void SetThreadAffinityAfterServerCreate(ThreadAffinityArgument args) {
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  if (args.thread_affinity == tensorflow::port::ThreadAffinity::INTERVAL) {
+    for (int cpu = args.start_core; cpu <= args.end_core; cpu++) {
+      if (cpu % 2 == 1) {
+        CPU_SET(cpu, &cpuset);
+      }
+    }
+  } else if (args.thread_affinity == tensorflow::port::ThreadAffinity::ORDER) {
+    for (int cpu = args.start_core + args.nums_tf_core; cpu <= args.end_core; cpu++) {
+      CPU_SET(cpu, &cpuset);
+    }
+  }
+  if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset) != 0) {
+    LOG(WARNING) << std::this_thread::get_id() << " set affinity failed";
+  }
+}
+
 Status Server::BuildAndStart(const Options& server_options) {
   if (server_options.grpc_port == 0 &&
       server_options.grpc_socket_path.empty()) {
@@ -216,6 +331,8 @@ Status Server::BuildAndStart(const Options& server_options) {
 
   auto* tf_serving_registry =
       init::TensorflowServingFunctionRegistration::GetRegistry();
+
+  ThreadAffinityArgument affinity_args;
 
   if (server_options.platform_config_file.empty()) {
     SessionBundleConfig session_bundle_config;
@@ -275,6 +392,10 @@ Status Server::BuildAndStart(const Options& server_options) {
             server_options.tensorflow_session_parallelism);
     }
 
+    TF_RETURN_IF_ERROR(ParseThreadAffinityConfig(server_options.task_affinity_isolation, affinity_args));
+    session_bundle_config.mutable_session_config()
+    ->set_use_batch_op_scheduling(server_options.batch_op_scheduling);
+
     const std::vector<string> tags =
         tensorflow::str_util::Split(server_options.saved_model_tags, ",");
     for (const string& tag : tags) {
@@ -322,7 +443,13 @@ Status Server::BuildAndStart(const Options& server_options) {
       server_options.force_allow_any_version_labels_for_unavailable_models;
   options.enable_cors_support = server_options.enable_cors_support;
 
+  if (affinity_args.thread_affinity) {
+    SetThreadAffinityBeforeServerCreate(affinity_args);
+  }
   TF_RETURN_IF_ERROR(ServerCore::Create(std::move(options), &server_core_));
+  if (affinity_args.thread_affinity) {
+    SetThreadAffinityAfterServerCreate(affinity_args);
+  }
 
   // Model config polling thread must be started after the call to
   // ServerCore::Create() to prevent config reload being done concurrently from
