@@ -3,11 +3,11 @@ set -x
 
 TF_SERVING_COMPILE_ROOT=$(pwd)/serving
 TENSORFLOW_DIR=$(pwd)/tensorflow
-DISTDIR=$TF_SERVING_COMPILE_ROOT/download
+DIST_DIR=$TF_SERVING_COMPILE_ROOT/download
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 
 PATH=$BAZEL_PATH:$PATH
-DISTDIR="${DISTDIR:-$DISTDIR}"
+DIST_DIR="${DISTDIR:-$DIST_DIR}"
 BAZEL_COMPILE_CACHE=$TF_SERVING_COMPILE_ROOT/output
 
 if ! command -v bazel &> /dev/null; then
@@ -46,7 +46,7 @@ gcc --version
 cd $TF_SERVING_COMPILE_ROOT && \
 PATH=$PATH \
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
-bazel --output_user_root=$BAZEL_COMPILE_CACHE build -c opt --distdir=$DISTDIR \
+bazel --output_user_root=$BAZEL_COMPILE_CACHE build -c opt --distdir=$DIST_DIR \
 --override_repository=org_tensorflow=$TENSORFLOW_DIR \
 --copt=-march=armv8.3-a+crc --copt=-O3 --copt=-fprefetch-loop-arrays \
 --copt=-Wno-error=maybe-uninitialized --copt=-Werror=stringop-overflow=0 \
