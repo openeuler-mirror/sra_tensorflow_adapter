@@ -3116,7 +3116,7 @@ TfLiteStatus NNAPIDelegateKernel::AddOpsAndTensors(TfLiteContext* context) {
       } else if (reg->builtin_code == kTfLiteBuiltinBatchToSpaceNd &&
                  input_pos == 2) {
         // NNAPI does not support crops.
-        // The Map fucntion will check if all crops are zero.
+        // The Map function will check if all crops are zero.
         continue;
       } else if (reg->builtin_code == kTfLiteBuiltinArgMin ||
                  reg->builtin_code == kTfLiteBuiltinArgMax) {

@@ -506,7 +506,7 @@ class FullyConnected
     if (op_signature.op->inputs.size() == 2) {
       return 6;
     }
-    // `keep_num_dims` is supported at verison 5.
+    // `keep_num_dims` is supported at version 5.
     if (fc_op.keep_num_dims) {
       return 5;
     }
