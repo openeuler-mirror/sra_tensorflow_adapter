@@ -52,6 +52,10 @@ build:mkl_aarch64 --copt=-O3
 build --define=build_with_onednn_v2=true
 build --define=xnn_enable_avxvnni=false
 
+build:ktfop --define=build_with_ktfop=true
+build:ktfop --define=build_with_kblas=true
+build:ktfop -c opt
+
 # Processor native optimizations (depends on build host capabilities).
 build:nativeopt --copt=-march=native
 build:nativeopt --host_copt=-march=native

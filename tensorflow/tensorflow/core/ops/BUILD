@@ -18,7 +18,10 @@ load(
     "//third_party/mkl:build_defs.bzl",
     "if_mkl",
 )
-
+load(
+    "//third_party/ktfop:build_defs.bzl",
+    "if_ktfop",
+)
 # A lot of packages try to minimize binary size by depending on individual ops,\
 # so they need access here.
 package(
@@ -60,6 +63,7 @@ tf_gen_op_libs(
         "functional_ops",
         "image_ops",
         "io_ops",
+        "ktfop_ops",
         "linalg_ops",
         "list_ops",
         "map_ops",
@@ -344,6 +348,8 @@ cc_library(
     }) + if_mkl([
         ":mkl_array_ops_op_lib",
         ":mkl_nn_ops_op_lib",
+    ]) + if_ktfop([
+        ":ktfop_ops_op_lib",
     ]),
     alwayslink = 1,
 )

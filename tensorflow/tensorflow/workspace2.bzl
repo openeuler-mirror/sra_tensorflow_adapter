@@ -26,6 +26,8 @@ load("//third_party/dlpack:workspace.bzl", dlpack = "repo")
 load("//third_party/ducc:workspace.bzl", ducc = "repo")
 load("//third_party/eigen3:workspace.bzl", eigen3 = "repo")
 load("//third_party/farmhash:workspace.bzl", farmhash = "repo")
+load("//third_party/ktfop:workspace.bzl", ktfop = "repo")
+load("//third_party/kblas:workspace.bzl", kblas = "repo")
 load("//third_party/flatbuffers:workspace.bzl", flatbuffers = "repo")
 load("//third_party/gemmlowp:workspace.bzl", gemmlowp = "repo")
 load("//third_party/hexagon:workspace.bzl", hexagon_nn = "repo")
@@ -67,6 +69,8 @@ def _initialize_third_party():
     dlpack()
     eigen3()
     farmhash()
+    kblas()
+    ktfop()
     flatbuffers()
     gemmlowp()
     hexagon_nn()
@@ -803,7 +807,7 @@ def _tf_repositories():
         name = "upb",
         sha256 = "61d0417abd60e65ed589c9deee7c124fe76a4106831f6ad39464e1525cef1454",
         strip_prefix = "upb-9effcbcb27f0a665f9f345030188c0b291e32482",
-        patch_file = ["//third_party/grpc:upb_platform_fix.patch"],
+        patch_file = ["//third_party/grpc:upb_platform_fix.patch", "//third_party/grpc:upb_gcc10_compile_fix.patch"],
         urls = tf_mirror_urls("https://github.com/protocolbuffers/upb/archive/9effcbcb27f0a665f9f345030188c0b291e32482.tar.gz"),
     )
 
