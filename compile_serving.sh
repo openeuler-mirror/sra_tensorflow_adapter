@@ -18,6 +18,8 @@ fi
 bazel version
 
 ENABLE_GCC12=false
+ENABLE_KTFOP=false
+KTFOP_OPTIONS=""
 
 FEATURES=$1
 IFS=',' read -ra features_array <<< "$FEATURES"
@@ -25,6 +27,9 @@ for feature in "${features_array[@]}"; do
     case "$feature" in
         "gcc12")
             ENABLE_GCC12=true
+            ;;
+        "ktfop")
+            ENABLE_KTFOP=true
             ;;
         *)
             echo "未识别的特性: $feature"
@@ -42,6 +47,10 @@ if [ "$ENABLE_GCC12" == true ]; then
     fi
 fi
 
+if [ "$ENABLE_KTFOP" == true ]; then
+    KTFOP_OPTIONS="--config=ktfop"
+fi
+
 gcc --version
 cd $TF_SERVING_COMPILE_ROOT && \
 PATH=$PATH \
@@ -50,4 +59,5 @@ bazel --output_user_root=$BAZEL_COMPILE_CACHE build -c opt --distdir=$DIST_DIR \
 --override_repository=org_tensorflow=$TENSORFLOW_DIR \
 --copt=-march=armv8.3-a+crc --copt=-O3 --copt=-fprefetch-loop-arrays \
 --copt=-Wno-error=maybe-uninitialized --copt=-Werror=stringop-overflow=0 \
+$KTFOP_OPTIONS \
 tensorflow_serving/model_servers:tensorflow_model_server
