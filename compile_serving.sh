@@ -6,7 +6,7 @@ TENSORFLOW_DIR=$(pwd)/tensorflow
 DIST_DIR=$TF_SERVING_COMPILE_ROOT/download
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 
-PATH=$BAZEL_PATH:$PATH
+export PATH=$BAZEL_PATH:$PATH
 DIST_DIR="${DISTDIR:-$DIST_DIR}"
 BAZEL_COMPILE_CACHE=$TF_SERVING_COMPILE_ROOT/output
 
