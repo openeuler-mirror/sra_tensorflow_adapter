@@ -244,14 +244,14 @@ void LogLines(int sev, absl::string_view text, const char* fname, int lineno) {
       eol = text.size();
     }
     auto msg = text.substr(cur, eol - cur);
-    tensorflow::internal::LogString(fname, lineno, sev,
-                                    string(msg.data(), msg.size()));
+    //tensorflow::internal::LogString(fname, lineno, sev,
+    //                                string(msg.data(), msg.size()));
     cur = eol + 1;
   }
 
   if (orig_sev == tensorflow::FATAL) {
-    tensorflow::internal::LogString(fname, lineno, orig_sev,
-                                    "Aborting due to errors.");
+    //tensorflow::internal::LogString(fname, lineno, orig_sev,
+    //                                "Aborting due to errors.");
   }
 }
 
