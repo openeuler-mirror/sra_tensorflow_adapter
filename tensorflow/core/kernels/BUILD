@@ -4088,7 +4088,10 @@ tf_kernel_library(
         "//conditions:default": [],
     }) + mkl_deps() + if_cuda([
         "//tensorflow/core/platform/default/build_config:cublas_plugin",
-    ]),
+    ]) + select({
+       "@org_tensorflow//tensorflow:linux_aarch64": ["//third_party/KDNN:kdnn_adapter"],
+       "//conditions:default": [],
+    }),
 )
 
 tf_mkl_kernel_library(

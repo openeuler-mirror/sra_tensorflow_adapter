@@ -215,7 +215,6 @@ class ThreadPool {
   // pointer points to, and should not attempt to delete.
   Eigen::ThreadPoolInterface* AsEigenThreadPool() const;
 
- private:
   // Divides the work represented by the range [0, total) into k shards.
   // Calls fn(i*block_size, (i+1)*block_size) from the ith shard (0 <= i < k).
   // Each shard may be executed on a different thread in parallel, depending on
@@ -226,7 +225,8 @@ class ThreadPool {
   void ParallelForFixedBlockSizeScheduling(
       const int64 total, const int64 block_size,
       const std::function<void(int64, int64)>& fn);
-
+  
+  private:
   // underlying_threadpool_ is the user_threadpool if user_threadpool is
   // provided in the constructor. Otherwise it is the eigen_threadpool_.
   Eigen::ThreadPoolInterface* underlying_threadpool_;
