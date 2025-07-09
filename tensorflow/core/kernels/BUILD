@@ -4069,6 +4069,27 @@ tf_kernel_library(
 )
 
 tf_kernel_library(
+    name = "fused_sparse_concat_op",
+    prefix = "fused_sparse_concat",
+    deps = MATH_DEPS,
+)
+
+tf_kernel_library(
+    name = "fused_sparse_segment_reduce_op",
+    prefix = "fused_sparse_segment_reduce",
+    deps = MATH_DEPS,
+)
+
+cc_library(
+    name = "fused",
+    deps = [
+        ":fused_sparse_concat_op",
+        ":fused_sparse_segment_reduce_op",
+    ],
+)
+
+
+tf_kernel_library(
     name = "matmul_op",
     srcs = [
         "matmul_op.cc",
