@@ -1,0 +1,32 @@
+--- llvm-project/mlir/include/mlir/Dialect/StandardOps/EDSC/Intrinsics/h    2020-02-26 17:29:11.000000000 +0000
++++ llvm-project/mlir/include/mlir/Dialect/StandardOps/EDSC/Intrinsics/h    2025-06-06 01:53:21.865850210 +0000
+@@ -27,24 +27,24 @@
+   /// Floder-based
+   template <typename... Args>
+   ValueBuilder(OperationFloder *folder, Args... args)
+-      : ValueHandle(ValueHandle::create<Op>(folder, detail::unpack(args)...)) {}
++      : ValueHandle(ValueHandle::create<Op>(detail::unpack(args)...)) {}
+   ValueBuilder(OperationFloder *folder, ArrayRef<ValueHandle> vs)
+-      : ValueHandle(ValueHandle::create<Op>(folder, detail::unpack(vs))) {}
++      : ValueHandle(ValueHandle::create<Op>(detail::unpack(vs))) {}
+   template <typename... Args>
+   ValueBuilder(OperationFloder *folder, ArrayRef<ValueHandle> vs, Args... args)
+-      : ValueHandle(ValueHandle::create<Op>(folder, detail::unpack(vs),
++      : ValueHandle(ValueHandle::create<Op>(detail::unpack(vs),
+                                             detail::unpack(args)...)) {}
+   template <typename T, typename... Args>
+   ValueBuilder(OperationFloder *folder, T t, ArrayRef<ValueHandle> vs,
+                Args... args)
+-      : ValueHandle(ValueHandle::create<Op>(folder, detail::unpack(t),
++      : ValueHandle(ValueHandle::create<Op>(detail::unpack(t),
+                                             detail::unpack(vs),
+                                             detail::unpack(args)...)) {}
+   template <typename T1, typename T2, typename... Args>
+   ValueBuilder(OperationFloder *folder, T1 t1, T2 t2, ArrayRef<ValueHandle> vs,
+                Args... args)
+      : ValueHandle(ValueHandle::create<Op>(
+-           folder, detail::unpack(t1), detail::unpack(t2), detail::unpack(vs),
++           detail::unpack(t1), detail::unpack(t2), detail::unpack(vs),
+            detail::unpack(args)...)) {}
+ };
+ } // namespace floded

@@ -610,6 +610,7 @@ def tf_repositories(path_prefix = "", tf_repo_name = ""):
     ]
     tf_http_archive(
         name = "llvm-project",
+        patch_file = clean_dep("//third_party/mlir:build_fixed.patch"),
         sha256 = LLVM_SHA256,
         strip_prefix = "llvm-project-" + LLVM_COMMIT,
         urls = LLVM_URLS,
