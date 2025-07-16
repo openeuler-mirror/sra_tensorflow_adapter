@@ -11,27 +11,6 @@ load("@org_tensorflow//third_party:common.bzl", "template_rule")
 
 cc_library(
     name = "aws-c-common",
-    srcs = select({
-        "@org_tensorflow//tensorflow:linux_aarch64": glob([
-            "source/posix/*.c",
-            "source/arch/*.c"
-        ]),
-        "@org_tensorflow//tensorflow:linux_x86_64": glob([
-            "source/posix/*.c",
-        ]),
-        "@org_tensorflow//tensorflow:macos": glob([
-            "source/posix/*.c",
-        ]),
-        "@org_tensorflow//tensorflow:linux_ppc64le": glob([
-            "source/posix/*.c",
-        ]),
-        "@org_tensorflow//tensorflow:raspberry_pi_armeabi": glob([
-            "source/posix/*.c",
-        ]),
-        "//conditions:default": [],
-    }) + glob([
-        "source/*.c",
-    ]),
     hdrs = [
         "include/aws/common/config.h"
     ] + glob([

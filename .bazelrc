@@ -293,7 +293,7 @@ build:short_logs --output_filter=DONT_MATCH_ANYTHING
 #   avoid having to define linux/win separately.
 build:avx_linux --copt=-mavx
 build:avx2_linux --copt=-mavx2
-build:native_arch_linux --copt=-march=native
+build:native_arch_linux --copt=-march=armv8-a
 build:avx_win --copt=/arch=AVX
 build:avx2_win --copt=/arch=AVX2
 
