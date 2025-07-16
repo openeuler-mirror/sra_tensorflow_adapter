@@ -1351,7 +1351,9 @@ tf_kernel_library(
 tf_kernel_library(
     name = "unique_op",
     prefix = "unique_op",
-    deps = ARRAY_DEPS,
+    deps = ARRAY_DEPS + [
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
 )
 
 tf_kernel_library(
@@ -2307,6 +2309,7 @@ tf_cc_test(
         "//tensorflow/core:test",
         "//tensorflow/core:test_main",
         "//tensorflow/core:testlib",
+        "//tensorflow/core/kernels/data:single_threaded_executor",
     ],
 )
 
@@ -4066,6 +4069,27 @@ tf_kernel_library(
 )
 
 tf_kernel_library(
+    name = "fused_sparse_concat_op",
+    prefix = "fused_sparse_concat",
+    deps = MATH_DEPS,
+)
+
+tf_kernel_library(
+    name = "fused_sparse_segment_reduce_op",
+    prefix = "fused_sparse_segment_reduce",
+    deps = MATH_DEPS,
+)
+
+cc_library(
+    name = "fused",
+    deps = [
+        ":fused_sparse_concat_op",
+        ":fused_sparse_segment_reduce_op",
+    ],
+)
+
+
+tf_kernel_library(
     name = "matmul_op",
     srcs = [
         "matmul_op.cc",
@@ -4085,7 +4109,10 @@ tf_kernel_library(
         "//conditions:default": [],
     }) + mkl_deps() + if_cuda([
         "//tensorflow/core/platform/default/build_config:cublas_plugin",
-    ]),
+    ]) + select({
+       "@org_tensorflow//tensorflow:linux_aarch64": ["//third_party/KDNN:kdnn_adapter"],
+       "//conditions:default": [],
+    }),
 )
 
 tf_mkl_kernel_library(

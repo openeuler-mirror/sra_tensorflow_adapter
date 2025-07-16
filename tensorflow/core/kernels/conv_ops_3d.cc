@@ -472,7 +472,7 @@ struct LaunchConvOp<GPUDevice, T> {
                       "see if a warning log message was printed above."));
 
       std::vector<tensorflow::AutotuneResult> results;
-      for (auto profile_algorithm : algorithms) {
+      for (const auto& profile_algorithm : algorithms) {
         // TODO(zhengxq): profile each algorithm multiple times to better
         // accuracy.
         DnnScratchAllocator scratch_allocator(ConvolveScratchSize, ctx);
