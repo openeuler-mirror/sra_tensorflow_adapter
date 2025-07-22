@@ -1,13 +1,20 @@
 licenses(["notice"])
 
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+
+config_setting(
+    name = "enable_kdnn",
+    define_values = {
+        "enable_kdnn": "true",
+    },
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "kdnn",
-    hdrs = glob(["kdnn_include/**/*.hpp"]),
-    includes = ["kdnn_include"],
-    srcs = ["kdnn_lib/libkdnn.so"],
-    copts = ["-fopenmp"],
-    linkopts = ["-fopenmp"],
-    alwayslink = 1,
+    hdrs = glob(["src/dnn/include/**/*.hpp"]),
+    includes = ["src/dnn/include"],
+    srcs = glob(["src/dnn/src/*.cpp", "src/dnn/src/*.hpp"]),
 )
 
 cc_library(
@@ -16,4 +23,10 @@ cc_library(
     strip_include_prefix = "/third_party/KDNN",
     visibility = ["//visibility:public"],
     deps = [":kdnn"],
+)
+
+bzl_library(
+    name = "build_defs_bzl",
+    srcs = ["build_defs.bzl"],
+    visibility = ["//visibility:public"],
 )

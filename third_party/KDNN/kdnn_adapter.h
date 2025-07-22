@@ -11,8 +11,6 @@ inline void kdnnGemm(OpKernelContext* ctx, const Tensor& a, const Tensor& b, Ten
     const float *A = a.flat<float>().data();
     const float *B = b.flat<float>().data();
     float *C = out->flat<float>().data();
-    float alpha = 1.0;
-    float beta = 0.0;
     // intra_op thread_pool
     thread::ThreadPool* thread_pool = 
         ctx->device()
@@ -23,7 +21,7 @@ inline void kdnnGemm(OpKernelContext* ctx, const Tensor& a, const Tensor& b, Ten
     const KDNN::TensorInfo weightsInfo = {{k, n}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
     const KDNN::TensorInfo dstInfo = {{m, n}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
     KDNN::Gemm gemm(srcInfo, weightsInfo, dstInfo, &eigen_tp);
-    gemm.Run(A, B, C, alpha, beta);
+    gemm.Run(A, B, C);
 }
 
 }// namespace tensorflow

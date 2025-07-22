@@ -42,6 +42,11 @@ load(
     "if_mkl_ml",
     "mkl_deps",
 )
+load(
+    "//third_party/kdnn:build_defs.bzl",
+    "if_enable_kdnn",
+    "kdnn_deps",
+)
 load("@local_config_cuda//cuda:build_defs.bzl", "if_cuda")
 load(
     "@local_config_rocm//rocm:build_defs.bzl",
@@ -4109,10 +4114,8 @@ tf_kernel_library(
         "//conditions:default": [],
     }) + mkl_deps() + if_cuda([
         "//tensorflow/core/platform/default/build_config:cublas_plugin",
-    ]) + select({
-       "@org_tensorflow//tensorflow:linux_aarch64": ["//third_party/KDNN:kdnn_adapter"],
-       "//conditions:default": [],
-    }),
+    ]) + kdnn_deps(),
+    defines = if_enable_kdnn(["ENABLE_KDNN=1"]),
 )
 
 tf_mkl_kernel_library(
