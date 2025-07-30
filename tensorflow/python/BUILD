@@ -156,6 +156,7 @@ py_library(
         ":pywrap_tf_session",
         ":pywrap_tfe",
         ":rnn_ops_gen",
+        ":embedding_fused_ops_gen",
         ":saver_test_utils",
         ":script_ops",
         ":sendrecv_ops_gen",
@@ -2972,6 +2973,8 @@ tf_gen_op_wrapper_private_py(
 )
 
 tf_gen_op_wrapper_private_py(name = "rnn_ops_gen")
+
+tf_gen_op_wrapper_private_py(name = "embedding_fused_ops_gen")
 
 tf_gen_op_wrapper_private_py(
     name = "sendrecv_ops_gen",
