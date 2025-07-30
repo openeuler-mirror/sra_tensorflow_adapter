@@ -1067,7 +1067,7 @@ cc_library(
         "//tensorflow/core/kernels:training_ops",
         "//tensorflow/core/kernels:word2vec_kernels",
         # after fix "//tensorflow/core/kernels/sparse:kernels",
-        "//tensorflow/core/kernels:fused",
+        "//tensorflow/core/kernels:embedding_fused_ops",
     ] + if_not_windows([
         "//tensorflow/core/kernels:fact_op",
         "//tensorflow/core/kernels:array_not_windows",

@@ -4069,22 +4069,59 @@ tf_kernel_library(
 )
 
 tf_kernel_library(
-    name = "fused_sparse_concat_op",
-    prefix = "fused_sparse_concat",
+    name = "embedding_fused_action_id_gather_op",
+    prefix = "embedding_fused_action_id_gather",
     deps = MATH_DEPS,
 )
 
 tf_kernel_library(
-    name = "fused_sparse_segment_reduce_op",
-    prefix = "fused_sparse_segment_reduce",
+    name = "embedding_fused_gather_op",
+    prefix = "embedding_fused_gather",
+    deps = MATH_DEPS,
+)
+
+tf_kernel_library(
+    name = "embedding_fused_padding_op",
+    prefix = "embedding_fused_padding",
+    deps = MATH_DEPS,
+)
+
+tf_kernel_library(
+    name = "embedding_fused_sparse_dynamic_stitch_op",
+    prefix = "embedding_fused_sparse_dynamic_stitch",
+    deps = MATH_DEPS,
+)
+
+tf_kernel_library(
+    name = "embedding_fused_reshape_op",
+    prefix = "embedding_fused_sparse_reshape",
+    deps = MATH_DEPS + [
+        ":reshape_util",
+    ],
+)
+
+tf_kernel_library(
+    name = "embedding_fused_sparse_segment_reduce_op",
+    prefix = "embedding_fused_sparse_segment_reduce",
+    deps = MATH_DEPS,
+)
+
+tf_kernel_library(
+    name = "embedding_fused_sparse_select_op",
+    prefix = "embedding_fused_sparse_select",
     deps = MATH_DEPS,
 )
 
 cc_library(
-    name = "fused",
+    name = "embedding_fused_ops",
     deps = [
-        ":fused_sparse_concat_op",
-        ":fused_sparse_segment_reduce_op",
+        ":embedding_fused_action_id_gather_op",
+        ":embedding_fused_gather_op",
+        ":embedding_fused_padding_op",
+        ":embedding_fused_sparse_dynamic_stitch_op",
+        ":embedding_fused_reshape_op",
+        ":embedding_fused_sparse_segment_reduce_op",
+        ":embedding_fused_sparse_select_op",
     ],
 )
 
