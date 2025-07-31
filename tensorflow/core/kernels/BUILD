@@ -5454,7 +5454,8 @@ tf_kernel_library(
         ":bounds_check",
         ":fill_functor",
         "//third_party/eigen3",
-    ],
+    ] + kdnn_deps(),
+    copts = if_enable_kdnn(["-DENABLE_KDNN=1"]),
 )
 
 tf_kernel_library(
