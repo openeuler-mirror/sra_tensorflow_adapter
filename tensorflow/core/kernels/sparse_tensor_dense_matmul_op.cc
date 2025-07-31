@@ -25,6 +25,13 @@ limitations under the License.
 #include "tensorflow/core/kernels/fill_functor.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
 
+#if defined(ENABLE_KDNN)
+#include <vector>
+#include <algorithm>
+#include "tensorflow/core/util/env_var.h"
+#include "kdnn_adapter.h"
+#endif
+
 namespace tensorflow {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
@@ -34,9 +41,10 @@ template <typename Device, typename T, typename Tindices>
 class SparseTensorDenseMatMulOp : public OpKernel {
  public:
   explicit SparseTensorDenseMatMulOp(OpKernelConstruction* ctx)
-      : OpKernel(ctx) {
+      : OpKernel(ctx), kdnn_enable(true) {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("adjoint_a", &adjoint_a_));
     OP_REQUIRES_OK(ctx, ctx->GetAttr("adjoint_b", &adjoint_b_));
+    TF_CHECK_OK(ReadBoolFromEnvVar("KDNN_ENABLE", true, &kdnn_enable));
   }
 
   void Compute(OpKernelContext* ctx) override {
@@ -133,6 +141,25 @@ class SparseTensorDenseMatMulOp : public OpKernel {
       return;
     }
 
+#if defined(ENABLE_KDNN)
+#define KDNN_ADJOINT(ADJ_A, ADJ_B)                                             \
+  if (std::is_same<T, float>::value &&                                         \
+      adjoint_a_ == ADJ_A && adjoint_b_ == ADJ_B) {                            \
+    Status functor_status = functor::KDNNSparseMatMulFunctor<                  \
+        CPUDevice, float, Tindices, ADJ_A,                                     \
+        ADJ_B>::Compute(ctx->eigen_device<Device>(), out->matrix<float>(),     \
+                        a_indices->matrix<Tindices>(), a_values->vec<float>(), \
+                        b->matrix<float>());                                   \
+    OP_REQUIRES_OK(ctx, functor_status);                                       \
+  }
+    if (kdnn_enable && std::is_same<T, float>::value && adjoint_b_ == false) {
+      KDNN_ADJOINT(false, false);
+      KDNN_ADJOINT(true, false);
+      return;
+    }
+
+#undef KDNN_ADJOINT
+#endif
 #define MAYBE_ADJOINT(ADJ_A, ADJ_B)                                        \
   if (adjoint_a_ == ADJ_A && adjoint_b_ == ADJ_B) {                        \
     Status functor_status = functor::SparseTensorDenseMatMulFunctor<       \
@@ -154,6 +181,7 @@ class SparseTensorDenseMatMulOp : public OpKernel {
  private:
   bool adjoint_a_;
   bool adjoint_b_;
+  bool kdnn_enable;
 };
 
 #define REGISTER_CPU(TypeT, TypeIndex)           \
@@ -311,6 +339,54 @@ struct SparseTensorDenseMatMulFunctor<CPUDevice, T, Tindices, ADJ_A, ADJ_B> {
         LOOP_NNZ(b);
       }
 #undef LOOP_NNZ
+    }
+    return Status::OK();
+  }
+};
+
+template <typename Tindices, bool ADJ_A, bool ADJ_B>
+struct KDNNSparseMatMulFunctor<CPUDevice, float, Tindices, ADJ_A, ADJ_B> {
+  // Vectorize certain operations above this size.
+  static const std::size_t kNumVectorize = 32;
+
+  static Status Compute(const CPUDevice& d, typename TTypes<float>::Matrix out,
+                        typename TTypes<Tindices>::ConstMatrix a_indices,
+                        typename TTypes<float>::ConstVec a_values,
+                        typename TTypes<float>::ConstMatrix b) {
+    const std::size_t nnz = a_values.size();
+    const std::size_t rhs_right = (ADJ_B ? b.dimension(0) : b.dimension(1));
+    const std::size_t lhs_right = (ADJ_B ? b.dimension(1) : b.dimension(0));
+    const int lhs_index_a = ADJ_A ? 1 : 0;
+    const int rhs_index_a = ADJ_A ? 0 : 1;
+
+    out.setZero();
+
+    // TODO(ebrevdo): After many failed experiments, can't find a multi-threaded
+    // approach that achieves the performance of the single threaded
+    // one.  Perhaps Eigen threadpool implementation is just too slow?
+
+    if (rhs_right < kNumVectorize) {
+      // Disable vectorization if the RHS of output is too small
+      auto maybe_adjoint_b = MaybeAdjoint<decltype(b), ADJ_B>(b);
+
+      for (std::size_t i = 0; i < nnz; ++i) {
+        const Tindices m = internal::SubtleMustCopy(a_indices(i, lhs_index_a));
+        const Tindices k = internal::SubtleMustCopy(a_indices(i, rhs_index_a));
+        if (!FastBoundsCheck(k, lhs_right)) {
+          return KOutOfBoundsError(k, i, rhs_index_a, lhs_right);
+        }
+        if (!FastBoundsCheck(m, out.dimension(0))) {
+          return MOutOfBoundsError(m, i, lhs_index_a, out.dimension(0));
+        }
+        const float a_value = ADJ_A ? MaybeConj(a_values(i)) : a_values(i);
+        for (std::size_t n = 0; n < rhs_right; ++n) {
+          const float b_value = maybe_adjoint_b(k, n);
+          out(m, n) += a_value * b_value;
+        }
+      }
+    } else {
+      const int b_chip_index = 0;
+      kdnnSparseMatmul<Tindices>(nnz, rhs_right, lhs_right, out, a_indices, a_values, b);
     }
     return Status::OK();
   }
