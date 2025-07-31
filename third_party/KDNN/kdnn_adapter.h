@@ -24,51 +24,56 @@ inline void kdnnGemm(OpKernelContext* ctx, const Tensor& a, const Tensor& b, Ten
     gemm.Run(A, B, C);
 }
 
-struct NonZeroElement {
-  int row;
-  int col;
-  float val;
-};
-
-static bool compareByRow(const NonZeroElement& a, const NonZeroElement& b) {
-  return a.row < b.row;
-}
-
 template<typename Tindices>
-void kdnnSparseMatmul(const std::size_t nnz,
-                             const std::size_t rhs_right, const std::size_t lhs_right,
-                             const int lhs_index_a, const int rhs_index_a,
-                             typename TTypes<float>::Matrix out,
-                             typename TTypes<Tindices>::ConstMatrix a_indices, 
-                             typename TTypes<float>::ConstVec a_values,
-                             typename TTypes<float>::ConstMatrix b) {
-    KDNN_INT idx[nnz];
-    float val[nnz];
-    std::vector<NonZeroElement> elements;
-    for (size_t i = 0; i < nnz; ++i) {
-        elements.emplace_back(NonZeroElement{a_indices(i, lhs_index_a), a_indices(i, rhs_index_a), a_values(i)});
-    }
-    std::sort(elements.begin(), elements.end(), compareByRow);
-    for (size_t i = 0; i < nnz; ++i) {
-        idx[i] = elements[i].col;
-        val[i] = elements[i].val;
-    }
+inline void kdnnSparseMatmulCSR(const std::size_t nnz,
+                      const std::size_t rhs_right, const std::size_t lhs_right,
+                      const int lhs_index_a, const int rhs_index_a,
+                      typename TTypes<float>::Matrix out,
+                      typename TTypes<Tindices>::ConstMatrix a_indices, 
+                      typename TTypes<float>::ConstVec a_values,
+                      typename TTypes<float>::ConstMatrix b) {
+    std::vector<int> idx(nnz);
     int m = out.dimension(0);
-    KDNN_INT pntrb[m] = {0};
-    KDNN_INT pntre[m] = {0};
-    std::vector<int> row_counts(m, 0);
-    for (const auto& t : elements) {
-        row_counts[t.row]++;
+    std::vector<int> pntrb(m);
+    std::vector<int> pntre(m);
+    std::vector<int> row_counts(m);
+    for (size_t i = 0; i < nnz; ++i) {
+        idx[i] = a_indices(i, rhs_index_a);
+        ++row_counts[a_indices(i, lhs_index_a)];
     }
+    
     int current_pos = 0;
     for (size_t i = 0; i < m; ++i) {
         pntrb[i] = current_pos;
         current_pos += row_counts[i];
         pntre[i] = current_pos;
     }
+    const KDNN::CsrSparseTensorInfo aInfo = {{m, lhs_right},
+        KDNN::Element::TypeT::F32, KDNN::Layout::AB, pntrb, pntre, idx, nnz};
+    const KDNN::TensorInfo bInfo = {{lhs_right, rhs_right},
+        KDNN::Element::TypeT::F32, KDNN::Layout::AB};
+    const KDNN::TensorInfo dstInfo = {{m, rhs_right},
+        KDNN::Element::TypeT::F32, KDNN::Layout::AB};
+    KDNN::SparseGemm sparse_csr(aInfo, bInfo, dstInfo);
+    sparse_csr.Run(a_values.data(), b.data(), out.data());
+}
+
+template<typename Tindices>
+void kdnnSparseMatmul(const std::size_t nnz,
+                      const std::size_t rhs_right, const std::size_t lhs_right,
+                      const int lhs_index_a, const int rhs_index_a,
+                      typename TTypes<float>::Matrix out,
+                      typename TTypes<Tindices>::ConstMatrix a_indices, 
+                      typename TTypes<float>::ConstVec a_values,
+                      typename TTypes<float>::ConstMatrix b) {
+    static const std::size_t kNumCSR = 720;
+    int m = out.dimension(0);
     VLOG(1) << "kdnnSparseMatmul, M: " << m << "  N:" << rhs_right << "  K:" << lhs_right << "  nnz:" << nnz;
-    KDNN::SparseCsrmm(KDNN_SPARSE_OPERATION_NON_TRANSPOSE, m, rhs_right, lhs_right, 
-                        1.0, "G00C", val, idx, pntrb, pntre, b.data(), rhs_right, 0.0, out.data(), rhs_right);
+    if ((m > kint32max) || (rhs_right > kint32max) || (lhs_right > kint32max)) {
+        LOG(WARNING) << "too large m/n/k in KDNN sparse matmul, max allowed is " << kint32max;
+        return;
+    }
+    kdnnSparseMatmulCSR<Tindices>(nnz, rhs_right, lhs_right, lhs_index_a, rhs_index_a, out, a_indices, a_values, b);
 }
 
 }// namespace tensorflow

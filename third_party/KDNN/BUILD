@@ -33,6 +33,7 @@ cc_library(
         "src/dnn/src/sparse/kernel/gemm_csr_row_k_small.c", 
         "src/dnn/src/sparse/**/*.S",
         ]),
+    visibility = ["//visibility:public"], 
 )
 
 cc_library(
@@ -41,14 +42,15 @@ cc_library(
     includes = ["src/dnn/include"],
     srcs = glob(["src/dnn/src/*.cpp", "src/dnn/src/*.hpp"]),
     deps = [":ksparse"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "kdnn_adapter",
     hdrs = ["kdnn_adapter.h", "kdnn_threadpool.h"],
     strip_include_prefix = "/third_party/KDNN",
-    visibility = ["//visibility:public"],
     deps = [":kdnn"],
+    visibility = ["//visibility:public"],
 )
 
 bzl_library(
