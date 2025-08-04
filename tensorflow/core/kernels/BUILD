@@ -43,7 +43,7 @@ load(
     "mkl_deps",
 )
 load(
-    "//third_party/kdnn:build_defs.bzl",
+    "//third_party/KDNN:build_defs.bzl",
     "if_enable_kdnn",
     "kdnn_deps",
 )
@@ -4152,7 +4152,7 @@ tf_kernel_library(
     }) + mkl_deps() + if_cuda([
         "//tensorflow/core/platform/default/build_config:cublas_plugin",
     ]) + kdnn_deps(),
-    defines = if_enable_kdnn(["ENABLE_KDNN=1"]),
+    copts = if_enable_kdnn(["-DENABLE_KDNN=1"]),
 )
 
 tf_mkl_kernel_library(
