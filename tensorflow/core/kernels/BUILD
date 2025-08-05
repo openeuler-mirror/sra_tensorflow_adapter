@@ -4112,6 +4112,12 @@ tf_kernel_library(
 )
 
 tf_kernel_library(
+    name = "embedding_fused_sparse_segment_reduce_nonzero_op",
+    prefix = "embedding_fused_sparse_segment_reduce_nonzero",
+    deps = MATH_DEPS,
+)
+
+tf_kernel_library(
     name = "embedding_fused_sparse_select_op",
     prefix = "embedding_fused_sparse_select",
     deps = MATH_DEPS,
@@ -4126,6 +4132,7 @@ cc_library(
         ":embedding_fused_sparse_dynamic_stitch_op",
         ":embedding_fused_reshape_op",
         ":embedding_fused_sparse_segment_reduce_op",
+        ":embedding_fused_sparse_segment_reduce_nonzero_op",
         ":embedding_fused_sparse_select_op",
     ],
 )
