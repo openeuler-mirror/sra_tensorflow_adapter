@@ -2,14 +2,6 @@ licenses(["notice"])
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 
-config_setting(
-    name = "enable_kdnn",
-    define_values = {
-        "enable_kdnn": "true",
-    },
-    visibility = ["//visibility:public"],
-)
-
 cc_library(
     name = "ksparse",
     hdrs = glob([
