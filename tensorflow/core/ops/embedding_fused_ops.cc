@@ -39,6 +39,20 @@ REGISTER_OP("KPFusedSparseSegmentReduce")
     .Output("slice_output: int32")
     .SetShapeFn(shape_inference::UnknownShape);
 
+REGISTER_OP("KPFusedSparseSegmentReduceNonzero")
+    .Input("data: float")
+    .Input("indices: Tidx")
+    .Input("slice_input: int64")
+    .Input("begin: int32")
+    .Input("end: int32")
+    .Input("strides: int32")
+    .Attr("combiner: int = 1")  // 0 for SUM, 1 for MEAN
+    .Attr("Tidx: {int32, int64} = DT_INT32")
+    .Output("output_shape: int64")
+    .Output("output_indices: int64")
+    .Output("output_nonzero: float")
+    .SetShapeFn(shape_inference::UnknownShape);
+
 REGISTER_OP("KPFusedEmbeddingPaddingFast")
     .Input("input0: int64")
     .Input("input1: float")
