@@ -44,7 +44,7 @@ class SparseTensorDenseMatMulOp : public OpKernel {
       : OpKernel(ctx), kdnn_enable(true) {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("adjoint_a", &adjoint_a_));
     OP_REQUIRES_OK(ctx, ctx->GetAttr("adjoint_b", &adjoint_b_));
-    TF_CHECK_OK(ReadBoolFromEnvVar("KDNN_ENABLE", true, &kdnn_enable));
+    OP_REQUIRES_OK(ctx, ReadBoolFromEnvVar("KDNN_ENABLE", true, &kdnn_enable));
   }
 
   void Compute(OpKernelContext* ctx) override {
@@ -385,8 +385,7 @@ struct KDNNSparseMatMulFunctor<CPUDevice, float, Tindices, ADJ_A, ADJ_B> {
         }
       }
     } else {
-      const int b_chip_index = 0;
-      kdnnSparseMatmul<Tindices>(nnz, rhs_right, lhs_right, out, a_indices, a_values, b);
+      kdnnSparseMatmul<Tindices>(nnz, rhs_right, lhs_right, lhs_index_a, rhs_index_a, out, a_indices, a_values, b);
     }
     return Status::OK();
   }

@@ -37,6 +37,7 @@ static bool compareByRow(const NonZeroElement& a, const NonZeroElement& b) {
 template<typename Tindices>
 void kdnnSparseMatmul(const std::size_t nnz,
                              const std::size_t rhs_right, const std::size_t lhs_right,
+                             const int lhs_index_a, const int rhs_index_a,
                              typename TTypes<float>::Matrix out,
                              typename TTypes<Tindices>::ConstMatrix a_indices, 
                              typename TTypes<float>::ConstVec a_values,
@@ -45,7 +46,7 @@ void kdnnSparseMatmul(const std::size_t nnz,
     float val[nnz];
     std::vector<NonZeroElement> elements;
     for (size_t i = 0; i < nnz; ++i) {
-        elements.emplace_back(NonZeroElement{a_indices(i, 0), a_indices(i, 1), a_values(i)});
+        elements.emplace_back(NonZeroElement{a_indices(i, lhs_index_a), a_indices(i, rhs_index_a), a_values(i)});
     }
     std::sort(elements.begin(), elements.end(), compareByRow);
     for (size_t i = 0; i < nnz; ++i) {
