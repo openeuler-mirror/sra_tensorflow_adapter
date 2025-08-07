@@ -43,26 +43,26 @@ static void GatherV2Impl(OpKernelContext* context,
   }
   OP_REQUIRES_OK(context,
                   context->allocate_temp(DT_FLOAT, temp_shape, temp));
-  VLOG(2) << "temp shape: " << temp->shape().DebugString();
+  VLOG(1) << "temp shape: " << temp->shape().DebugString();
 
   const int num_indices = indices_shape.num_elements();
   float* temp_data = temp->flat<float>().data();
-  VLOG(2) << "num_indices : " << num_indices;
+  VLOG(1) << "num_indices : " << num_indices;
   if (axis == 0) {
     const int slice_size = P1;
     for (int i = 0; i < num_indices; ++i) {
       Tindices idx = indices_data[i];
       if (idx < 0 || idx >= P0) {
-        LOG(FATAL) << "GatherV2 axis=0: index out of range: " << idx;
+        LOG(WARNING) << "GatherV2 axis=0: index out of range: " << idx;
       }
       std::memcpy(temp_data + i * slice_size,
                   params_data + idx * slice_size,
                   sizeof(float) * slice_size);
     }
   } else {
-    LOG(FATAL) << "Only axis=0 is supported";
+    LOG(WARNING) << "Only axis=0 is supported";
   }
-  VLOG(2) << "temp value : " << temp->DebugString(100);
+  VLOG(1) << "temp value : " << temp->DebugString(100);
 }
 
 template <typename Tindices1, typename Tindices2>
@@ -77,9 +77,9 @@ class KPFusedEmbeddingActionIdGatherOp : public OpKernel {
     const Tensor& indices2 = context->input(2);
     const Tensor& pack_dim = context->input(3);
 
-    VLOG(2) << "indices1 shape: " << indices1.shape().DebugString();
-    VLOG(2) << "params shape: " << params.shape().DebugString();
-    VLOG(2) << "indices2 shape: " << indices2.shape().DebugString();
+    VLOG(1) << "indices1 shape: " << indices1.shape().DebugString();
+    VLOG(1) << "params shape: " << params.shape().DebugString();
+    VLOG(1) << "indices2 shape: " << indices2.shape().DebugString();
     OP_REQUIRES(context, indices1.dims() <= 2, errors::InvalidArgument("indices1 dims must <= 2"));
     OP_REQUIRES(context, indices2.dims() <= 2, errors::InvalidArgument("indices2 dims must <= 2"));
     OP_REQUIRES(context, params.dims() == 2, errors::InvalidArgument("params dims must = 2"));
@@ -94,15 +94,15 @@ class KPFusedEmbeddingActionIdGatherOp : public OpKernel {
                  indices2.flat<Tindices2>().data(), indices2.shape(),
                  0, &temp1);
     int pack_size = pack_dim.scalar<int32>()();
-    VLOG(2) << "pack_size value: " << pack_size;
+    VLOG(1) << "pack_size value: " << pack_size;
     int a_reshaped_cols = temp1.NumElements() / pack_size;
     auto a_reshaped = temp1.shaped<float, 2>({pack_size, a_reshaped_cols});
-    VLOG(2) << "a_reshaped_cols : " << a_reshaped_cols;
+    VLOG(1) << "a_reshaped_cols : " << a_reshaped_cols;
     Tensor* output;
     int output_cols = a_reshaped_cols + 1680;
     OP_REQUIRES_OK(context,
                   context->allocate_output(0, TensorShape({pack_size, output_cols}), &output));
-    VLOG(2) << "output shape: " << output->shape().DebugString();
+    VLOG(1) << "output shape: " << output->shape().DebugString();
     auto output_matrix = output->matrix<float>();
     output_matrix.slice(
       Eigen::array<Eigen::Index, 2>{0, 0},

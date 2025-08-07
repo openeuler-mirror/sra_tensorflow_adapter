@@ -150,27 +150,26 @@ class KPFusedSparseReshapeOp : public OpKernel {
   explicit KPFusedSparseReshapeOp(OpKernelConstruction* context) : OpKernel(context) { }
 
   void Compute(OpKernelContext* context) override {
-    VLOG(2) << "Executing KPFusedSparseReshape operator";
     const Tensor& slice_input = context->input(0);
     const Tensor& begin = context->input(1);
     const Tensor& new_shape = context->input(2);
 
     OP_REQUIRES(context, slice_input.dims() == 2, errors::Internal("slice_input dims must == 2"));
 
-    VLOG(2) << "Input slice_input shape: " << slice_input.shape().DebugString();
-    VLOG(2) << "Input begin value: " << begin.DebugString();
-    VLOG(2) << "Input new_shape value: " << new_shape.DebugString();
+    VLOG(1) << "Input slice_input shape: " << slice_input.shape().DebugString();
+    VLOG(1) << "Input begin value: " << begin.DebugString();
+    VLOG(1) << "Input new_shape value: " << new_shape.DebugString();
 
     int32 col = begin.flat<int32>().data()[1];
     int64_t stridedslice57_out = slice_input.dim_size(0);
     auto slice_input_mat = slice_input.matrix<int64>();
 
-    VLOG(2) << "stridedslice57_out: " << stridedslice57_out;
-    VLOG(2) << "slice_input.dim_size(0): " << slice_input.dim_size(0);
-    VLOG(2) << "slice_input.dim_size(1): " << slice_input.dim_size(1);
+    VLOG(1) << "stridedslice57_out: " << stridedslice57_out;
+    VLOG(1) << "slice_input.dim_size(0): " << slice_input.dim_size(0);
+    VLOG(1) << "slice_input.dim_size(1): " << slice_input.dim_size(1);
     OP_REQUIRES(context, stridedslice57_out == slice_input.dim_size(0), errors::Internal("concat shape mismatch"));
-    VLOG(2) << "Column index from begin: " << col;
-    VLOG(2) << "indices size: " << stridedslice57_out;
+    VLOG(1) << "Column index from begin: " << col;
+    VLOG(1) << "indices size: " << stridedslice57_out;
 
     Tensor shape_in(DT_INT64, TensorShape({2}));
     auto tensor_flat = shape_in.flat<int64>();
