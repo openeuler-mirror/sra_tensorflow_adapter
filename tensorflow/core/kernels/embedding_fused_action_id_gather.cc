@@ -48,19 +48,14 @@ static void GatherV2Impl(OpKernelContext* context,
   const int num_indices = indices_shape.num_elements();
   float* temp_data = temp->flat<float>().data();
   VLOG(1) << "num_indices : " << num_indices;
-  if (axis == 0) {
-    const int slice_size = P1;
-    for (int i = 0; i < num_indices; ++i) {
-      Tindices idx = indices_data[i];
-      if (idx < 0 || idx >= P0) {
-        LOG(WARNING) << "GatherV2 axis=0: index out of range: " << idx;
-      }
-      std::memcpy(temp_data + i * slice_size,
-                  params_data + idx * slice_size,
-                  sizeof(float) * slice_size);
-    }
-  } else {
-    LOG(WARNING) << "Only axis=0 is supported";
+  OP_REQUIRES(context, axis == 0, errors::InvalidArgument("axis only support 0"));
+  const int slice_size = P1;
+  for (int i = 0; i < num_indices; ++i) {
+    Tindices idx = indices_data[i];
+    OP_REQUIRES(context, (idx < 0 || idx >= P0), errors::InvalidArgument("GatherV2 axis=0: index out of range"));
+    std::memcpy(temp_data + i * slice_size,
+                params_data + idx * slice_size,
+                sizeof(float) * slice_size);
   }
   VLOG(1) << "temp value : " << temp->DebugString(100);
 }
