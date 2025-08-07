@@ -66,9 +66,8 @@ class KPFusedGather : public OpKernel {
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(
-                       0, TensorShape({1}), &out_shape));
-    auto output_shape = out_shape->flat<int64>();
-    output_shape(0) = static_cast<int64>(unique_values.size());
+                       0, TensorShape({unique_values.size()}), &out_shape));
+    std::memcpy(out_shape->data(), unique_values.data(), unique_values.size() * sizeof(int64_t));
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(

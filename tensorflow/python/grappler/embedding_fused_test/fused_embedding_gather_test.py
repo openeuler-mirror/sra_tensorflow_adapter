@@ -73,7 +73,7 @@ class TestFusedGather(unittest.TestCase):
         )
         
         slice_out, slice_out_indices = tf.unique(slice_out)
-        output_shape = tf.shape(slice_out)
+        output_shape = slice_out
         slice_out = tf.reshape(slice_out, [-1])
         slice_out, _ = tf.unique(slice_out)
 
