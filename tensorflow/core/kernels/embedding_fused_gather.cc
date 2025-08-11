@@ -26,7 +26,6 @@ class KPFusedGather : public OpKernel {
   explicit KPFusedGather(OpKernelConstruction* context) : OpKernel(context) { }
 
   void Compute(OpKernelContext* context) override {
-    VLOG(2) << "Executing KPFusedGather operator";
     const Tensor& data = context->input(0);
     const Tensor& slice_input = context->input(1);
     const Tensor& begin = context->input(2);
@@ -34,15 +33,15 @@ class KPFusedGather : public OpKernel {
     OP_REQUIRES(context, slice_input.dims() == 2, errors::Internal("slice_input dims must == 2"));
     OP_REQUIRES(context, data.dims() == 2, errors::Internal("indentity dims must == 2"));
 
-    VLOG(2) << "Input indentity shape: " << data.shape().DebugString();
-    VLOG(2) << "Input slice_input shape: " << slice_input.shape().DebugString();
-    VLOG(2) << "Input begin value: " << begin.SummarizeValue(10);
+    VLOG(1) << "Input indentity shape: " << data.shape().DebugString();
+    VLOG(1) << "Input slice_input shape: " << slice_input.shape().DebugString();
+    VLOG(1) << "Input begin value: " << begin.SummarizeValue(10);
 
     int32 col = begin.flat<int32>().data()[1];
     auto data_mat = data.matrix<float>();
     auto slice_input_mat = slice_input.matrix<int64>();
 
-    VLOG(2) << "Column index from begin: " << col;
+    VLOG(1) << "Column index from begin: " << col;
 
     std::vector<int64_t> unique_values;
     std::vector<int32_t> indices(slice_input.dim_size(0));

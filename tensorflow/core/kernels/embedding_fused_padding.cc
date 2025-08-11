@@ -39,6 +39,7 @@ class KPFusedEmbeddingPaddingOp : public OpKernel {
     const Tensor& input_rows = context->input(2);
     const Tensor& reshape_sizes = context->input(3);
 
+    VLOG(1) << "Input shape: " << input.shape().DebugString();
     OP_REQUIRES(context, origin_shape.dims() == 1, errors::InvalidArgument("origin_shape dims must == 1"));
     OP_REQUIRES(context, origin_shape.NumElements() >= 1, errors::InvalidArgument("origin_shape NumElements must >= 1"));
     OP_REQUIRES(context, input.dims() == 2, errors::InvalidArgument("input dims must == 2"));
