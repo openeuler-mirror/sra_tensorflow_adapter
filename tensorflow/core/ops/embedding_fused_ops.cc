@@ -95,7 +95,7 @@ REGISTER_OP("KPFusedSparseSelect")
 REGISTER_OP("KPFusedSparseReshape")
     .Input("slice_input: int64")
     .Input("begin: int32")
-    .Input("new_shape: int32")
+    .Input("new_shape: int64")
     .Output("out_indices: int64")
     .Output("out_shape: int64")
     .SetShapeFn(shape_inference::UnknownShape);

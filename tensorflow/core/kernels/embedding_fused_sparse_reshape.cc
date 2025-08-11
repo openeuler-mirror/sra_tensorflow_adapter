@@ -185,8 +185,8 @@ class KPFusedSparseReshapeOp : public OpKernel {
 
     Tensor new_shape_in(DT_INT64, TensorShape({2}));
     auto newshape_tensor_flat = new_shape_in.flat<int64>();
-    newshape_tensor_flat(0) = static_cast<int64>(new_shape.flat<int32>()(0));
-    newshape_tensor_flat(1) = static_cast<int64>(new_shape.flat<int32>()(1));
+    newshape_tensor_flat(0) = new_shape.flat<int64>()(0);
+    newshape_tensor_flat(1) = new_shape.flat<int64>()(1);
     ReshapeKp(context, indices_in, shape_in, new_shape_in, 0, 1);
   }
 };
