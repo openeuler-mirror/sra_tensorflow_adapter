@@ -34,6 +34,7 @@ limitations under the License.
 
 #if defined(ENABLE_KDNN)
 #include "kdnn_adapter.h"
+#include "tensorflow/core/util/env_var.h"
 #endif
 
 namespace tensorflow {
@@ -453,10 +454,7 @@ class MatMulOp : public OpKernel {
     LaunchMatMul<Device, T, USE_CUBLAS>::GetBlasGemmAlgorithm(
         ctx, &algorithms_, &algorithms_set_already_);
     use_autotune_ = MatmulAutotuneEnable();
-    char* kdnn_env = std::getenv("KDNN_ENABLE");
-    if (kdnn_env && std::string(kdnn_env) == "off") {
-      kdnn_enable = false;
-    }
+    OP_REQUIRES_OK(ctx, tensorflow::ReadBoolFromEnvVar("KDNN_ENABLE", true, &kdnn_enable));
   }
 
   void Compute(OpKernelContext* ctx) override {

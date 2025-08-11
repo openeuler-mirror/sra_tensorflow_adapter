@@ -2,25 +2,11 @@ licenses(["notice"])
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 
-config_setting(
-    name = "enable_kdnn",
-    define_values = {
-        "enable_kdnn": "true",
-    },
-    visibility = ["//visibility:public"],
-)
-
-cc_library(
-    name = "kdnn",
-    hdrs = glob(["src/dnn/include/**/*.hpp"]),
-    includes = ["src/dnn/include"],
-    srcs = glob(["src/dnn/src/*.cpp", "src/dnn/src/*.hpp"]),
-)
-
 cc_library(
     name = "ksparse",
     hdrs = glob([
         "src/dnn/include/**/*.h",
+        "src/dnn/include/**/*.hpp",
         "src/dnn/src/sparse/**/*.S",
         "src/dnn/src/sparse/**/*.h",
         "src/dnn/src/sparse/**/*.c",
@@ -50,11 +36,19 @@ cc_library(
 )
 
 cc_library(
+    name = "kdnn",
+    hdrs = glob(["src/dnn/include/**/*.hpp", "src/dnn/include/**/*.h"]),
+    includes = ["src/dnn/include"],
+    srcs = glob(["src/dnn/src/*.cpp", "src/dnn/src/*.hpp"]),
+    deps = [":ksparse"],
+)
+
+cc_library(
     name = "kdnn_adapter",
     hdrs = ["kdnn_adapter.h", "kdnn_threadpool.h"],
     strip_include_prefix = "/third_party/KDNN",
     visibility = ["//visibility:public"],
-    deps = [":kdnn", ":ksparse"],
+    deps = [":kdnn"],
 )
 
 bzl_library(

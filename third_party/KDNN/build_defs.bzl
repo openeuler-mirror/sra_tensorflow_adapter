@@ -11,7 +11,7 @@ def if_enable_kdnn(if_true, if_false = []):
         A select evaluating to either if_true or if_false as appropriate.
     """
     return select({
-        "@org_tensorflow//third_party/KDNN:enable_kdnn": if_true,
+        "@org_tensorflow//tensorflow:linux_aarch64": if_true,
         "//conditions:default": if_false,
     })
 
@@ -19,6 +19,6 @@ def kdnn_deps():
     """Shorthand for select() to pull in the correct set of KDNN library deps.
     """
     return select({
-        "@org_tensorflow//third_party/KDNN:enable_kdnn": ["//third_party/KDNN:kdnn_adapter"],
+        "@org_tensorflow//tensorflow:linux_aarch64": ["//third_party/KDNN:kdnn_adapter"],
         "//conditions:default": [],
     })
