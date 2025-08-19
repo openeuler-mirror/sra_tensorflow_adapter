@@ -24,6 +24,7 @@ limitations under the License.
 #include "tensorflow/core/framework/register_types.h"
 #include "tensorflow/core/kernels/fill_functor.h"
 #include "tensorflow/core/util/matmul_autotune.h"
+#include "tensorflow/core/util/env_var.h"
 #if GOOGLE_CUDA
 #include "third_party/gpus/cuda/include/cuda.h"
 #endif
@@ -34,7 +35,6 @@ limitations under the License.
 
 #if defined(ENABLE_KDNN)
 #include "kdnn_adapter.h"
-#include "tensorflow/core/util/env_var.h"
 #endif
 
 namespace tensorflow {
@@ -454,7 +454,9 @@ class MatMulOp : public OpKernel {
     LaunchMatMul<Device, T, USE_CUBLAS>::GetBlasGemmAlgorithm(
         ctx, &algorithms_, &algorithms_set_already_);
     use_autotune_ = MatmulAutotuneEnable();
+#if defined(ENABLE_KDNN)
     OP_REQUIRES_OK(ctx, tensorflow::ReadBoolFromEnvVar("KDNN_ENABLE", true, &kdnn_enable));
+#endif
   }
 
   void Compute(OpKernelContext* ctx) override {

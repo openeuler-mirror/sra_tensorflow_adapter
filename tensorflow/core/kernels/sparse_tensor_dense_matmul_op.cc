@@ -24,13 +24,14 @@ limitations under the License.
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/kernels/fill_functor.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
+#include "tensorflow/core/util/env_var.h"
 
 #if defined(ENABLE_KDNN)
-#include <vector>
-#include <algorithm>
-#include "tensorflow/core/util/env_var.h"
 #include "kdnn_adapter.h"
 #endif
+
+#include <vector>
+#include <algorithm>
 
 namespace tensorflow {
 
@@ -44,7 +45,9 @@ class SparseTensorDenseMatMulOp : public OpKernel {
       : OpKernel(ctx), kdnn_enable(true) {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("adjoint_a", &adjoint_a_));
     OP_REQUIRES_OK(ctx, ctx->GetAttr("adjoint_b", &adjoint_b_));
+#if defined(ENABLE_KDNN)
     OP_REQUIRES_OK(ctx, ReadBoolFromEnvVar("KDNN_ENABLE", true, &kdnn_enable));
+#endif
   }
 
   void Compute(OpKernelContext* ctx) override {
@@ -344,6 +347,7 @@ struct SparseTensorDenseMatMulFunctor<CPUDevice, T, Tindices, ADJ_A, ADJ_B> {
   }
 };
 
+#if defined(ENABLE_KDNN)
 template <typename Tindices, bool ADJ_A, bool ADJ_B>
 struct KDNNSparseMatMulFunctor<CPUDevice, float, Tindices, ADJ_A, ADJ_B> {
   // Vectorize certain operations above this size.
@@ -390,6 +394,7 @@ struct KDNNSparseMatMulFunctor<CPUDevice, float, Tindices, ADJ_A, ADJ_B> {
     return Status::OK();
   }
 };
+#endif
 
 }  // namespace functor
 
