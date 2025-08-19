@@ -47,9 +47,13 @@ cc_library(
 
 cc_library(
     name = "kdnn_adapter",
+    srcs = ["kdnn_flags.cc"],
     hdrs = ["kdnn_adapter.h", "kdnn_threadpool.h"],
     strip_include_prefix = "/third_party/KDNN",
-    deps = [":kdnn"],
+    deps = [
+        "@com_github_gflags_gflags//:gflags",
+        ":kdnn",
+    ],
     visibility = ["//visibility:public"],
 )
 
