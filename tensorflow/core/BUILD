@@ -146,6 +146,10 @@ load(
     "if_mkl",
     "mkl_deps",
 )
+load(
+    "//third_party/annc:build_defs.bzl",
+    "if_enable_annc",
+)
 # Placeholder for Google-internal load statements.
 
 package(
@@ -623,7 +627,6 @@ tf_gen_op_libs(
         "data_flow_ops",
         "dataset_ops",
         "decode_proto_ops",
-        "embedding_fused_ops",
         "encode_proto_ops",
         "experimental_dataset_ops",
         "function_ops",
@@ -665,6 +668,13 @@ tf_gen_op_libs(
         ":lib",
         ":protos_all_cc",
     ],
+)
+
+tf_gen_op_libs(
+    op_lib_names = [
+        "embedding_fused_ops",
+    ],
+    deps = [":protos_all_cc"],
 )
 
 tf_gen_op_libs(
@@ -852,7 +862,6 @@ cc_library(
         ":dataset_ops_op_lib",
         ":debug_ops_op_lib",
         ":decode_proto_ops_op_lib",
-        ":embedding_fused_ops_op_lib",
         ":encode_proto_ops_op_lib",
         ":experimental_dataset_ops_op_lib",
         ":function_ops_op_lib",
@@ -910,6 +919,8 @@ cc_library(
     ]) + if_tensorrt([
         "//tensorflow/compiler/tf2tensorrt:trt_engine_resource_ops_op_lib",
         "//tensorflow/compiler/tf2tensorrt:trt_op_libs",
+    ]) + if_enable_annc([
+        ":embedding_fused_ops_op_lib",
     ]),
     alwayslink = 1,
 )
@@ -1067,7 +1078,6 @@ cc_library(
         "//tensorflow/core/kernels:training_ops",
         "//tensorflow/core/kernels:word2vec_kernels",
         # after fix "//tensorflow/core/kernels/sparse:kernels",
-        "//tensorflow/core/kernels:embedding_fused_ops",
     ] + if_not_windows([
         "//tensorflow/core/kernels:fact_op",
         "//tensorflow/core/kernels:array_not_windows",
@@ -1105,6 +1115,8 @@ cc_library(
     ]) + if_tensorrt([
         "//tensorflow/compiler/tf2tensorrt:trt_engine_resource_op_kernels",
         "//tensorflow/compiler/tf2tensorrt:trt_op_kernels",
+    ]) + if_enable_annc([
+        "//tensorflow/core/kernels:embedding_fused_ops",
     ]),
 )
 

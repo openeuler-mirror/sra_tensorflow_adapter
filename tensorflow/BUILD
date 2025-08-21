@@ -536,6 +536,7 @@ bzl_library(
         "//tensorflow/core/platform/default:cuda_build_defs_bzl",
         "//third_party/mkl:build_defs_bzl",
         "//third_party/mkl_dnn:build_defs_bzl",
+        "//third_party/annc:build_defs_bzl",
         "//third_party/ngraph:build_defs_bzl",
         "@local_config_cuda//cuda:build_defs_bzl",
         "@local_config_rocm//rocm:build_defs_bzl",
