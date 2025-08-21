@@ -24,10 +24,11 @@ limitations under the License.
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/kernels/fill_functor.h"
 #include "tensorflow/core/lib/bfloat16/bfloat16.h"
-#include "tensorflow/core/util/env_var.h"
+#include "gflags/gflags.h"
 
 #if defined(ENABLE_KDNN)
 #include "kdnn_adapter.h"
+DECLARE_bool(enable_kdnn);
 #endif
 
 #include <vector>
@@ -42,12 +43,9 @@ template <typename Device, typename T, typename Tindices>
 class SparseTensorDenseMatMulOp : public OpKernel {
  public:
   explicit SparseTensorDenseMatMulOp(OpKernelConstruction* ctx)
-      : OpKernel(ctx), kdnn_enable(true) {
+      : OpKernel(ctx) {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("adjoint_a", &adjoint_a_));
     OP_REQUIRES_OK(ctx, ctx->GetAttr("adjoint_b", &adjoint_b_));
-#if defined(ENABLE_KDNN)
-    OP_REQUIRES_OK(ctx, ReadBoolFromEnvVar("KDNN_ENABLE", true, &kdnn_enable));
-#endif
   }
 
   void Compute(OpKernelContext* ctx) override {
@@ -155,7 +153,7 @@ class SparseTensorDenseMatMulOp : public OpKernel {
                         b->matrix<float>());                                   \
     OP_REQUIRES_OK(ctx, functor_status);                                       \
   }
-    if (kdnn_enable && std::is_same<T, float>::value && adjoint_b_ == false) {
+    if (FLAGS_enable_kdnn && std::is_same<T, float>::value && adjoint_b_ == false) {
       KDNN_ADJOINT(false, false);
       KDNN_ADJOINT(true, false);
       return;
@@ -184,7 +182,6 @@ class SparseTensorDenseMatMulOp : public OpKernel {
  private:
   bool adjoint_a_;
   bool adjoint_b_;
-  bool kdnn_enable;
 };
 
 #define REGISTER_CPU(TypeT, TypeIndex)           \

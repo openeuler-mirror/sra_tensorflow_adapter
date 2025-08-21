@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 // See docs in ../ops/math_ops.cc.
+#include "gflags/gflags.h"
 
 #define EIGEN_USE_THREADS
 
@@ -24,7 +25,6 @@ limitations under the License.
 #include "tensorflow/core/framework/register_types.h"
 #include "tensorflow/core/kernels/fill_functor.h"
 #include "tensorflow/core/util/matmul_autotune.h"
-#include "tensorflow/core/util/env_var.h"
 #if GOOGLE_CUDA
 #include "third_party/gpus/cuda/include/cuda.h"
 #endif
@@ -35,6 +35,7 @@ limitations under the License.
 
 #if defined(ENABLE_KDNN)
 #include "kdnn_adapter.h"
+DECLARE_bool(enable_kdnn);
 #endif
 
 namespace tensorflow {
@@ -447,16 +448,13 @@ template <typename Device, typename T, bool USE_CUBLAS>
 class MatMulOp : public OpKernel {
  public:
   explicit MatMulOp(OpKernelConstruction* ctx)
-      : OpKernel(ctx), algorithms_set_already_(false), kdnn_enable(true) {
+      : OpKernel(ctx), algorithms_set_already_(false) {
     OP_REQUIRES_OK(ctx, ctx->GetAttr("transpose_a", &transpose_a_));
     OP_REQUIRES_OK(ctx, ctx->GetAttr("transpose_b", &transpose_b_));
 
     LaunchMatMul<Device, T, USE_CUBLAS>::GetBlasGemmAlgorithm(
         ctx, &algorithms_, &algorithms_set_already_);
     use_autotune_ = MatmulAutotuneEnable();
-#if defined(ENABLE_KDNN)
-    OP_REQUIRES_OK(ctx, tensorflow::ReadBoolFromEnvVar("KDNN_ENABLE", true, &kdnn_enable));
-#endif
   }
 
   void Compute(OpKernelContext* ctx) override {
@@ -526,7 +524,7 @@ class MatMulOp : public OpKernel {
                       out->flat<bfloat16>().data(), out->NumElements());
     }
 #if defined(ENABLE_KDNN)
-    else if (kdnn_enable && std::is_same<T, float>::value &&
+    else if (FLAGS_enable_kdnn && std::is_same<T, float>::value &&
             !transpose_a_ && !transpose_b_) {
       kdnnGemm(ctx, a, b, out, transpose_a_, transpose_b_);
     }
@@ -543,7 +541,6 @@ class MatMulOp : public OpKernel {
   bool use_autotune_;
   bool transpose_a_;
   bool transpose_b_;
-  bool kdnn_enable;
 };
 
 namespace functor {
