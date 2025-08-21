@@ -46,6 +46,11 @@ limitations under the License.
 #include "tensorflow/core/platform/stream_executor.h"
 #endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
 
+#if defined(ENABLE_KDNN)
+#include "kdnn_adapter.h"
+DECLARE_bool(enable_kdnn);
+#endif
+
 namespace tensorflow {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
@@ -123,6 +128,12 @@ struct ParallelMatMulKernel<Scalar, false> {
   static void Run(const OpKernelContext* context, const Tensor& in_x,
                   const Tensor& in_y, bool adj_x, bool adj_y,
                   const MatMulBCast& bcast, Tensor* out, int start, int limit) {
+#if defined(ENABLE_KDNN)
+    if (FLAGS_enable_kdnn && std::is_same<Scalar, float>::value && !adj_x && !adj_y) {
+      kdnnParallelGemm(context, in_x, in_y, out, bcast, start, limit);
+      return;
+    }
+#endif
     auto Tx = in_x.tensor<Scalar, 3>();
     auto Ty = in_y.tensor<Scalar, 3>();
     auto Tz = out->tensor<Scalar, 3>();
@@ -171,6 +182,12 @@ struct SequentialMatMulKernel {
   static void Run(const Tensor& in_x, const Tensor& in_y, bool adj_x,
                   bool adj_y, const MatMulBCast& bcast, Tensor* out, int start,
                   int limit) {
+#if defined(ENABLE_KDNN)
+    if (FLAGS_enable_kdnn && std::is_same<Scalar, float>::value && !adj_x && !adj_y) {
+      kdnnSeqGemm(in_x, in_y, out, bcast, start, limit);
+      return;
+    }
+#endif
     const bool should_bcast = bcast.IsBroadcastingRequired();
     const auto& x_batch_indices = bcast.x_batch_indices();
     const auto& y_batch_indices = bcast.y_batch_indices();

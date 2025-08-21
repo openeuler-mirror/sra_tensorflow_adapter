@@ -4002,7 +4002,8 @@ tf_kernel_library(
     prefix = "batch_matmul_op",
     deps = MATH_DEPS + [":eigen_contraction_kernel"] + if_mkl_ml([
         "//third_party/mkl:intel_binary_blob",
-    ]),
+    ]) + kdnn_deps(),
+    defines = if_enable_kdnn(["ENABLE_KDNN=1"]),
 )
 
 tf_mkl_kernel_library(
