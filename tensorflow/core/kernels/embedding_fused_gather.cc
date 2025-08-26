@@ -35,6 +35,7 @@ class KPFusedGather : public OpKernel {
 
     VLOG(1) << "Input indentity shape: " << data.shape().DebugString();
     VLOG(1) << "Input slice_input shape: " << slice_input.shape().DebugString();
+    VLOG(1) << "Input slice_input: " << slice_input.SummarizeValue(1000);
     VLOG(1) << "Input begin value: " << begin.SummarizeValue(10);
 
     int32 col = begin.flat<int32>().data()[1];
@@ -87,7 +88,7 @@ class KPFusedGather : public OpKernel {
                         2, TensorShape({unique_values.size(), 12}), &out_data));
     auto output_data = out_data->matrix<float>();
     int cur_row = 0;
-    for (auto &indice : unique_values) {
+    for (int indice = 0; indice < unique_values.size(); ++indice) {
         for (int i = 0; i < 12; ++i) {
             output_data(cur_row, i) = gather1_result[12 * indice + i];
         }
