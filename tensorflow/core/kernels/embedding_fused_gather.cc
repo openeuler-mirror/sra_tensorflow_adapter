@@ -13,8 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/framework/common_shape_fns.h"
-#include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/util/work_sharder.h"
@@ -22,7 +20,7 @@ limitations under the License.
 using namespace tensorflow;
 
 class KPFusedGather : public OpKernel {
- public:
+public:
   explicit KPFusedGather(OpKernelConstruction* context) : OpKernel(context) { }
 
   void Compute(OpKernelContext* context) override {
@@ -66,33 +64,27 @@ class KPFusedGather : public OpKernel {
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(
-                       0, TensorShape({unique_values.size()}), &out_shape));
+                   0, TensorShape({unique_values.size()}), &out_shape));
     std::memcpy(out_shape->data(), unique_values.data(), unique_values.size() * sizeof(int64_t));
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(
-                        1, TensorShape({static_cast<int32>(indices.size())}), &out_indices));
+                   1, TensorShape({static_cast<int32>(indices.size())}), &out_indices));
     std::memcpy(out_indices->data(), indices.data(), indices.size() * sizeof(int32_t));
-    OP_REQUIRES(context, data.dim_size(1) * unique_values.size() % 12 == 0, 
+    OP_REQUIRES(context, data.dim_size(1) * unique_values.size() % 12 == 0,
                 errors::Internal("cannot reshape to [-1, 12]"));
-    
-    std::vector<float> gather1_result;
-    for (auto &indice : unique_values) {
-        for (int64_t i = 0; i < data.dim_size(1); ++i) {
-            gather1_result.push_back(data_mat(indice, i));
-        }
-    }
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(
-                        2, TensorShape({unique_values.size(), 12}), &out_data));
+                   2, TensorShape({unique_values.size(), 12}), &out_data));
     auto output_data = out_data->matrix<float>();
-    int cur_row = 0;
-    for (int indice = 0; indice < unique_values.size(); ++indice) {
-        for (int i = 0; i < 12; ++i) {
-            output_data(cur_row, i) = gather1_result[12 * indice + i];
-        }
-        cur_row++;
+
+    int64_t cols = data.dim_size(1);
+    for (int64_t cur_row = 0; cur_row < unique_values.size(); ++cur_row) {
+        int64_t idx = unique_values[cur_row];
+        const float* src = data_mat.data() + idx * cols;
+        float* dst = output_data.data() + cur_row * cols;
+        std::memcpy(dst, src, cols * sizeof(float));
     }
   }
 };

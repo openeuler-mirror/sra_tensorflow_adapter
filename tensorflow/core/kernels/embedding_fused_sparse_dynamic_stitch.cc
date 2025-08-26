@@ -13,12 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include <arm_neon.h>
-
 #include <vector>
 
-#include "tensorflow/core/framework/common_shape_fns.h"
-#include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/util/work_sharder.h"
@@ -26,12 +22,11 @@ limitations under the License.
 using namespace tensorflow;
 
 class KPFusedSparseDynamicStitchOp : public OpKernel {
- public:
+public:
   explicit KPFusedSparseDynamicStitchOp(OpKernelConstruction* context)
       : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
-    float* output;
     const Tensor& x = context->input(0);
     auto x_flat = x.flat<int64>();
     int64_t num_elems = x_flat.size();
@@ -54,7 +49,7 @@ class KPFusedSparseDynamicStitchOp : public OpKernel {
     OP_REQUIRES_OK(context,
                    context->allocate_output(0, TensorShape({num_elems, output_stride}),
                                             &output_tensor));
-    output = (float*)output_tensor->tensor_data().data();
+    float* output = (float*)output_tensor->tensor_data().data();
 
     const size_t copy_size = output_stride * sizeof(float);
     auto worker_threads = context->device()->tensorflow_cpu_worker_threads();

@@ -13,23 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include <iostream>
-#include <vector>
-
-#include "tensorflow/core/framework/common_shape_fns.h"
-#include "tensorflow/core/framework/shape_inference.h"
-#include "tensorflow/core/framework/op.h"
-#include "tensorflow/core/framework/types.h"
 #include "tensorflow/core/framework/op_kernel.h"
-namespace tensorflow {
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/core/util/work_sharder.h"
 
+namespace tensorflow {
+  
 template <typename Tindices>
-static void GatherV2Impl(OpKernelContext* context,
-                    const float* params_data, 
-                    const TensorShape& params_shape,
-                    const Tindices* indices_data,
-                    const TensorShape& indices_shape,
-                    int axis, Tensor* temp) {
+static void GatherV2Impl(OpKernelContext* context, const float* params_data, const TensorShape& params_shape,
+    const Tindices* indices_data, const TensorShape& indices_shape, int axis, Tensor* temp) {
   TensorShape temp_shape;
   const int P0 = params_shape.dim_size(0);
   int P1 = 1;
@@ -41,8 +33,7 @@ static void GatherV2Impl(OpKernelContext* context,
     temp_shape.AddDim(params_shape.dim_size(d));
     P1 *= params_shape.dim_size(d);
   }
-  OP_REQUIRES_OK(context,
-                  context->allocate_temp(DT_FLOAT, temp_shape, temp));
+  OP_REQUIRES_OK(context, context->allocate_temp(DT_FLOAT, temp_shape, temp));
   VLOG(1) << "temp shape: " << temp->shape().DebugString();
 
   const int num_indices = indices_shape.num_elements();
@@ -52,17 +43,18 @@ static void GatherV2Impl(OpKernelContext* context,
   const int slice_size = P1;
   for (int i = 0; i < num_indices; ++i) {
     Tindices idx = indices_data[i];
-    OP_REQUIRES(context, (idx < 0 || idx >= P0), errors::InvalidArgument("GatherV2 axis=0: index out of range"));
-    std::memcpy(temp_data + i * slice_size,
-                params_data + idx * slice_size,
-                sizeof(float) * slice_size);
+    OP_REQUIRES(context, (idx >= 0 && idx < P0), errors::InvalidArgument("GatherV2 axis=0: index out of range"));
+    std::memcpy(
+        temp_data + i * slice_size, params_data + idx * slice_size, sizeof(float) * slice_size
+    );
   }
   VLOG(1) << "temp value : " << temp->DebugString(100);
 }
 
+
 template <typename Tindices1, typename Tindices2>
 class KPFusedEmbeddingActionIdGatherOp : public OpKernel {
- public:
+public:
   explicit KPFusedEmbeddingActionIdGatherOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* context) override {
@@ -81,13 +73,11 @@ class KPFusedEmbeddingActionIdGatherOp : public OpKernel {
     OP_REQUIRES(context, pack_dim.NumElements() == 1, errors::InvalidArgument("pack_dim NumElements must = 1"));
 
     Tensor temp;
-    GatherV2Impl<Tindices1>(context, params.flat<float>().data(), params.shape(),
-                 indices1.flat<Tindices1>().data(), indices1.shape(),
-                 0, &temp);
+    GatherV2Impl<Tindices1>(context, params.flat<float>().data(), params.shape(), indices1.flat<Tindices1>().data(),
+        indices1.shape(), 0, &temp);
     Tensor temp1;
-    GatherV2Impl<Tindices2>(context, temp.flat<float>().data(), temp.shape(),
-                 indices2.flat<Tindices2>().data(), indices2.shape(),
-                 0, &temp1);
+    GatherV2Impl<Tindices2>(context, temp.flat<float>().data(), temp.shape(), indices2.flat<Tindices2>().data(),
+        indices2.shape(), 0, &temp1);
     int pack_size = pack_dim.scalar<int32>()();
     VLOG(1) << "pack_size value: " << pack_size;
     int a_reshaped_cols = temp1.NumElements() / pack_size;
@@ -96,16 +86,25 @@ class KPFusedEmbeddingActionIdGatherOp : public OpKernel {
     Tensor* output;
     int output_cols = a_reshaped_cols + 1680;
     OP_REQUIRES_OK(context,
-                  context->allocate_output(0, TensorShape({pack_size, output_cols}), &output));
+                   context->allocate_output(0, TensorShape({pack_size, output_cols}), &output));
     VLOG(1) << "output shape: " << output->shape().DebugString();
-    auto output_matrix = output->matrix<float>();
-    output_matrix.slice(
-      Eigen::array<Eigen::Index, 2>{0, 0},
-      Eigen::array<Eigen::Index, 2>{pack_size, a_reshaped_cols}) = a_reshaped;
-    
-    output_matrix.slice(
-      Eigen::array<Eigen::Index, 2>{0, a_reshaped_cols},
-      Eigen::array<Eigen::Index, 2>{pack_size, 1680}).setZero();
+    auto a_reshaped_data = a_reshaped.data();
+    auto worker_threads = context->device()->tensorflow_cpu_worker_threads();
+    const int64 cost_per_unit = a_reshaped_cols + 1680;
+    auto work = [&](int64 start_row, int64 end_row) {
+      float* base = output->matrix<float>().data();
+      for (int64 row = start_row; row < end_row; ++row) {
+        float* dst_row = base + row * (a_reshaped_cols + 1680);
+        std::memcpy(
+            dst_row, a_reshaped_data + row * a_reshaped_cols, sizeof(float) * a_reshaped_cols
+        );
+        std::memset(
+            dst_row + a_reshaped_cols, 0, sizeof(float) * 1680
+        );
+      }
+    };
+    Shard(worker_threads->num_threads, worker_threads->workers, pack_size,
+          cost_per_unit, work);
   }
 };
 

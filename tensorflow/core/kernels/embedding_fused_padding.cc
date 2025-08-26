@@ -13,21 +13,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include <iostream>
 #include <vector>
 
 #include "tensorflow/core/framework/common_shape_fns.h"
 #include "tensorflow/core/framework/shape_inference.h"
-#include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/types.h"
+#include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/framework/op_kernel.h"
+
 namespace tensorflow {
 
 using shape_inference::InferenceContext;
 using shape_inference::ShapeHandle;
 
 class KPFusedEmbeddingPaddingOp : public OpKernel {
- public:
+public:
   explicit KPFusedEmbeddingPaddingOp(OpKernelConstruction* context) : OpKernel(context) {
     fast_ = (type_string() == "KPFusedEmbeddingPaddingFast");
   }
@@ -67,32 +67,29 @@ class KPFusedEmbeddingPaddingOp : public OpKernel {
     int output_rows = padding_rows + input.dim_size(0);
     int output_cols = input.dim_size(1);
     OP_REQUIRES(
-      context,
-      output_rows * output_cols % reshape_cols == 0,
-      errors::InvalidArgument("padding cannot reshape to [-1, ", reshape_cols, "]")
+        context, output_rows * output_cols % reshape_cols == 0,
+        errors::InvalidArgument("padding cannot reshape to [-1, ", reshape_cols, "]")
     );
     int reshape_rows = output_rows * output_cols / reshape_cols;
     if (fast_) {
-      OP_REQUIRES_OK(context,
-                   context->allocate_output(1, TensorShape({}),
-                                            &output1));
+      OP_REQUIRES_OK(context, context->allocate_output(1, TensorShape({}), &output1));
       output1->scalar<int32>()() = reshape_rows;
       return;
     }
 
     OP_REQUIRES_OK(context,
                    context->allocate_temp(DT_FLOAT, TensorShape({padding_rows + input_rows_value, output_cols}),
-                                            &padding));
+                   &padding));
     auto input_matrix = input.matrix<float>();
     auto padding_matrix = padding.matrix<float>();
 
     padding_matrix.slice(
-      Eigen::array<Eigen::Index, 2>{0, 0},
-      Eigen::array<Eigen::Index, 2>{input_rows_value, output_cols}) = input_matrix;
+        Eigen::array<Eigen::Index, 2>{0, 0},
+        Eigen::array<Eigen::Index, 2>{input_rows_value, output_cols}) = input_matrix;
     
     padding_matrix.slice(
-      Eigen::array<Eigen::Index, 2>{input_rows_value, 0},
-      Eigen::array<Eigen::Index, 2>{padding_rows, output_cols}).setZero();
+        Eigen::array<Eigen::Index, 2>{input_rows_value, 0},
+        Eigen::array<Eigen::Index, 2>{padding_rows, output_cols}).setZero();
 
     TensorShape reshaped_shape({reshape_rows, reshape_cols});
     OP_REQUIRES_OK(context,
@@ -100,7 +97,7 @@ class KPFusedEmbeddingPaddingOp : public OpKernel {
     output1->flat<float>() = padding.flat<float>();
   }
 
-  private:
+private:
     bool fast_;
 };
 
