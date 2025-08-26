@@ -47,6 +47,10 @@ load(
     "if_enable_kdnn",
     "kdnn_deps",
 )
+load(
+    "//third_party/annc:build_defs.bzl",
+    "if_enable_annc",
+)
 load("@local_config_cuda//cuda:build_defs.bzl", "if_cuda")
 load(
     "@local_config_rocm//rocm:build_defs.bzl",
@@ -4075,31 +4079,41 @@ tf_kernel_library(
 
 tf_kernel_library(
     name = "embedding_fused_action_id_gather_op",
-    prefix = "embedding_fused_action_id_gather",
+    srcs = if_enable_annc([
+        "embedding_fused_action_id_gather.cc",
+    ]),
     deps = MATH_DEPS,
 )
 
 tf_kernel_library(
     name = "embedding_fused_gather_op",
-    prefix = "embedding_fused_gather",
+    srcs = if_enable_annc([
+        "embedding_fused_gather.cc",
+    ]),
     deps = MATH_DEPS,
 )
 
 tf_kernel_library(
     name = "embedding_fused_padding_op",
-    prefix = "embedding_fused_padding",
+    srcs = if_enable_annc([
+        "embedding_fused_padding.cc",
+    ]),
     deps = MATH_DEPS,
 )
 
 tf_kernel_library(
     name = "embedding_fused_sparse_dynamic_stitch_op",
-    prefix = "embedding_fused_sparse_dynamic_stitch",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_dynamic_stitch.cc",
+    ]),
     deps = MATH_DEPS,
 )
 
 tf_kernel_library(
     name = "embedding_fused_reshape_op",
-    prefix = "embedding_fused_sparse_reshape",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_reshape.cc",
+    ]),
     deps = MATH_DEPS + [
         ":reshape_util",
     ],
@@ -4107,25 +4121,31 @@ tf_kernel_library(
 
 tf_kernel_library(
     name = "embedding_fused_sparse_segment_reduce_op",
-    prefix = "embedding_fused_sparse_segment_reduce",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_segment_reduce.cc",
+    ]),
     deps = MATH_DEPS,
 )
 
 tf_kernel_library(
     name = "embedding_fused_sparse_segment_reduce_nonzero_op",
-    prefix = "embedding_fused_sparse_segment_reduce_nonzero",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_segment_reduce_nonzero.cc",
+    ]),
     deps = MATH_DEPS,
 )
 
 tf_kernel_library(
     name = "embedding_fused_sparse_select_op",
-    prefix = "embedding_fused_sparse_select",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_select.cc",
+    ]),
     deps = MATH_DEPS,
 )
 
 cc_library(
     name = "embedding_fused_ops",
-    deps = [
+    deps = if_enable_annc([
         ":embedding_fused_action_id_gather_op",
         ":embedding_fused_gather_op",
         ":embedding_fused_padding_op",
@@ -4134,7 +4154,7 @@ cc_library(
         ":embedding_fused_sparse_segment_reduce_op",
         ":embedding_fused_sparse_segment_reduce_nonzero_op",
         ":embedding_fused_sparse_select_op",
-    ],
+    ]),
 )
 
 
