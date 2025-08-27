@@ -15,6 +15,8 @@ limitations under the License.
 
 #include <vector>
 
+#include "tensorflow/core/framework/common_shape_fns.h"
+#include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/util/work_sharder.h"
@@ -35,15 +37,21 @@ public:
     const int num_partitions = num_inputs - 1;
     int output_stride = 0;
     std::vector<const float*> variables(num_partitions);
+    std::vector<int64_t> variable_rows(num_partitions);
     for (int i = 1; i < num_inputs; ++i) {
+      const Tensor& input_tensor = context->input(i);
+      OP_REQUIRES(context, input_tensor.dims() == 2, errors::InvalidArgument("input dims must == 2"));
       if (i == 1) {
-        const Tensor& input_tensor = context->input(i);
-        if (input_tensor.shape().dims() == 2) {
-          output_stride = input_tensor.shape().dim_size(1);
-        }
+        output_stride = input_tensor.dim_size(1);
+      } else {
+        OP_REQUIRES(context, input_tensor.dim_size(1)  == output_stride,
+                    errors::InvalidArgument("All inputs must have same second dimension"));
       }
       variables[i - 1] = context->input(i).flat<float>().data();
+      variable_rows[i - 1] = input_tensor.dim_size(0);
     }
+
+    OP_REQUIRES(context, output_stride > 0, errors::InvalidArgument("output_stride must > 0"));
 
     Tensor* output_tensor = nullptr;
     OP_REQUIRES_OK(context,
@@ -61,6 +69,9 @@ public:
         const int64_t global_id = x_flat(i);
         const int64_t table_id = global_id % num_partitions;
         const int64_t row_id = global_id / num_partitions;
+        
+        OP_REQUIRES(context, row_id < variable_rows[table_id], errors::InvalidArgument(
+          "row_id out of range."));
 
         std::memcpy(output + i * output_stride,
                     variables[table_id] + row_id * output_stride, copy_size);

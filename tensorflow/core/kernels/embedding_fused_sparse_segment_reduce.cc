@@ -15,6 +15,8 @@ limitations under the License.
 
 #include <arm_neon.h>
 
+#include "tensorflow/core/framework/common_shape_fns.h"
+#include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/util/work_sharder.h"
@@ -38,10 +40,21 @@ public:
     const Tensor& indices = context->input(1);
     const Tensor& slice_input = context->input(2);
     const Tensor& begin = context->input(3);
+    const Tensor& begin_1 = context->input(4);
 
+    OP_REQUIRES(context, input_tensor.dims() == 2, errors::InvalidArgument("input must be 2-D"));
+    OP_REQUIRES(context, slice_input.dims() == 2, errors::InvalidArgument("slice input must be 2-D"));
+    OP_REQUIRES(context, begin.NumElements() == 2,  errors::InvalidArgument("begin must have 2 elements"));
+    OP_REQUIRES(context, begin_1.NumElements() == 1, errors::InvalidArgument("begin_1 must have 1 element"));
     int64_t num_indices = indices.dim_size(0);
     int64_t embedding_size = input_tensor.dim_size(1);
     int32 col = begin.flat<int32>().data()[1];
+    int32 out_dim = static_cast<int32>(begin_1.flat<int32>()(0));
+
+    OP_REQUIRES(context, col >= 0 && col < slice_input.dim_size(1), 
+                 errors::InvalidArgument("Column index out of range"));
+    OP_REQUIRES(context, num_indices <= slice_input.dim_size(0),
+                errors::InvalidArgument("indices out of range"));
 
     auto input_data = input_tensor.matrix<float>().data();
     auto indices_vec = indices.vec<Tidx>();
@@ -65,7 +78,9 @@ public:
     Tensor* slice_out = nullptr;
     OP_REQUIRES_OK(context,
                    context->allocate_output(1, TensorShape({}), &slice_out));
-    slice_out->scalar<int32>()() = batch_size;
+    if (out_dim == 0)
+      slice_out->scalar<int32>()() = batch_size;
+    else slice_out->scalar<int32>()() = embedding_size;
 
     auto output_data = output->matrix<float>().data();
 
