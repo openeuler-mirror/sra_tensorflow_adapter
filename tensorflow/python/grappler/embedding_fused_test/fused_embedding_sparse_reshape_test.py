@@ -8,7 +8,7 @@ from tensorflow.python.ops import gen_embedding_fused_ops
 from utils.utils import benchmark_op
 
 
-def ori_sparse_reshape_graph(slice_input, begin, newshape):
+def ori_sparse_reshape_graph(slice_input, begin, newshape, pack_const):
     slice67_out = tf.strided_slice(
             slice_input,
             begin=begin,
@@ -29,7 +29,7 @@ def ori_sparse_reshape_graph(slice_input, begin, newshape):
         shrink_axis_mask=1
     )
     
-    const2 = tf.constant(2)
+    const2 = pack_const
     input_shape = tf.stack([slice57_out, const2])
     input_shape = tf.cast(input_shape, tf.int64)
 
@@ -49,11 +49,12 @@ def ori_sparse_reshape_graph(slice_input, begin, newshape):
     return sparse_tensor_out.indices, sparse_tensor_out.dense_shape, concat_out
 
 
-def opt_sparse_reshape_graph(slice_input, begin, newshape):
+def opt_sparse_reshape_graph(slice_input, begin, newshape, pack_const):
     custom_out1, custom_out2 = gen_embedding_fused_ops.KPFusedSparseReshape(
             slice_input=slice_input,
             begin=begin,
-            new_shape=newshape
+            new_shape=newshape,
+            pack_const=pack_const,
     )
     return custom_out1, custom_out2
 
@@ -75,7 +76,7 @@ class TestFusedSparseReshape(unittest.TestCase):
         # cls.sess.close()
         return 
 
-    def _run_kp_reshape_test(self, slice_shape, base_slice_input, base_begin, base_newshape, num_runs):
+    def _run_kp_reshape_test(self, slice_shape, base_slice_input, base_begin, base_newshape, pack_const, num_runs):
         with tf.Graph().as_default():
             slice_input = tf.compat.v1.placeholder(tf.int64, shape=slice_shape, name="slice_input")
             begin = tf.compat.v1.placeholder(tf.int32, shape=(2,), name="begin")
@@ -88,9 +89,9 @@ class TestFusedSparseReshape(unittest.TestCase):
             }
 
             with tf.name_scope("ori"):
-                out_ori1, out_ori2, out_ori3 = ori_sparse_reshape_graph(slice_input, begin, newshape)
+                out_ori1, out_ori2, out_ori3 = ori_sparse_reshape_graph(slice_input, begin, newshape, pack_const)
             with tf.name_scope("opt"):
-                out_opt1, out_opt2 = opt_sparse_reshape_graph(slice_input, begin, newshape)
+                out_opt1, out_opt2 = opt_sparse_reshape_graph(slice_input, begin, newshape, pack_const)
             
             with tf.compat.v1.Session(config=self.config) as sess:
                 out_ori_val1, out_ori_val2, out_ori_val3 = sess.run(
@@ -138,13 +139,15 @@ class TestFusedSparseReshape(unittest.TestCase):
         base_slice_input = np.array([[0, 0], [0, 1], [1, 2], [3, 4]], dtype=np.int64)
         base_begin = [0, 1]
         base_newshape = [2, 4]
-        self._run_kp_reshape_test((4, 2), base_slice_input, base_begin, base_newshape, num_runs=100)
+        pack_const = 2
+        self._run_kp_reshape_test((4, 2), base_slice_input, base_begin, base_newshape, pack_const, num_runs=100)
         
     def test_kp_reshape_2(self):
         base_slice_input = np.array([[0, 1]], dtype=np.int64)
         base_begin = [0, 1]
         base_newshape = [-1, 1]
-        self._run_kp_reshape_test((1, 2), base_slice_input, base_begin, base_newshape, num_runs=100)
+        pack_const = 1
+        self._run_kp_reshape_test((1, 2), base_slice_input, base_begin, base_newshape, pack_const, num_runs=100)
 
 
 if __name__ == "__main__":

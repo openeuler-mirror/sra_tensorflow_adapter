@@ -153,14 +153,16 @@ class KPFusedSparseReshapeOp : public OpKernel {
     const Tensor& slice_input = context->input(0);
     const Tensor& begin = context->input(1);
     const Tensor& new_shape = context->input(2);
+    const Tensor& pack_const = context->input(3);
 
     OP_REQUIRES(context, slice_input.dims() == 2, errors::Internal("slice_input dims must == 2"));
-
+    OP_REQUIRES(context, new_shape.dim_size(0) == 2, errors::Internal("new_shape dim size must == 2"));
     VLOG(1) << "Input slice_input shape: " << slice_input.shape().DebugString();
     VLOG(1) << "Input begin value: " << begin.DebugString();
     VLOG(1) << "Input new_shape value: " << new_shape.DebugString();
 
     int32 col = begin.flat<int32>().data()[1];
+    OP_REQUIRES(context, col < slice_input.dim_size(1), errors::Internal("begin[1] must < slice_input.dim_size(1)"));
     int64_t stridedslice57_out = slice_input.dim_size(0);
     auto slice_input_mat = slice_input.matrix<int64>();
 
@@ -174,8 +176,8 @@ class KPFusedSparseReshapeOp : public OpKernel {
     Tensor shape_in(DT_INT64, TensorShape({2}));
     auto tensor_flat = shape_in.flat<int64>();
     tensor_flat(0) = stridedslice57_out;
-    tensor_flat(1) = 2;
-
+    tensor_flat(1) = pack_const.flat<int64>().data()[0];
+    
     Tensor indices_in(DT_INT64, TensorShape({stridedslice57_out, 2}));
     auto indices_in_mat = indices_in.matrix<int64>();
     for (int i = 0; i < stridedslice57_out; ++i) {
