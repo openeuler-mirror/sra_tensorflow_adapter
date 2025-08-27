@@ -10,28 +10,27 @@ from utils.utils import benchmark_op
 np.random.seed(140)
 
 
-def opt_padding_fast_graph(input0, input1, input2, input3):
+def opt_padding_fast_graph(input0, input1, input2, input3, pack):
     # execute custom op
-    _, custom_out = gen_embedding_fused_ops.kp_fused_embedding_padding_fast(input0, input1, input2, input3)
+    _, custom_out = gen_embedding_fused_ops.kp_fused_embedding_padding_fast(input0, input1, input2, input3, pack)
     return custom_out
 
 
-def opt_padding_graph(input0, input1, input2, input3):
+def opt_padding_graph(input0, input1, input2, input3, pack):
     # execute custom op
-    _, custom_out = gen_embedding_fused_ops.kp_fused_embedding_padding(input0, input1, input2, input3)
+    _, custom_out = gen_embedding_fused_ops.kp_fused_embedding_padding(input0, input1, input2, input3, pack)
     return custom_out
 
 
-def ori_padding_fast_graph(input0, input1, input2, input3):
+def ori_padding_fast_graph(input0, input1, input2, input3, pack):
     cast = tf.cast(input0, tf.int32)
     begin = tf.constant([0], dtype=tf.int32)
     end = tf.constant([1], dtype=tf.int32)
     strides = tf.constant([1], dtype=tf.int32)
     hash_rows = tf.strided_slice(cast, begin=begin, end=end, strides=strides, shrink_axis_mask=1)
     sub_out = hash_rows - input2
-    const = tf.constant(input1.shape[1], dtype=tf.int32)
-    pack = tf.stack([sub_out, const], axis=0)
-    fill = tf.fill(pack, tf.constant(0, dtype=tf.float32))
+    pack_op = tf.stack([sub_out, pack], axis=0)
+    fill = tf.fill(pack_op, tf.constant(0, dtype=tf.float32))
     concat = tf.concat([input1, fill], 0)
     reshape = tf.reshape(concat, input3)
     shape_tensor = tf.shape(reshape)
@@ -39,16 +38,15 @@ def ori_padding_fast_graph(input0, input1, input2, input3):
     return output
 
 
-def ori_padding_graph(input0, input1, input2, input3):
+def ori_padding_graph(input0, input1, input2, input3, pack):
     cast = tf.cast(input0, tf.int32)
     begin = tf.constant([0], dtype=tf.int32)
     end = tf.constant([1], dtype=tf.int32)
     strides = tf.constant([1], dtype=tf.int32)
     hash_rows = tf.strided_slice(cast, begin=begin, end=end, strides=strides, shrink_axis_mask=1)
     sub_out = hash_rows - input2
-    const = tf.constant(input1.shape[1], dtype=tf.int32)
-    pack = tf.stack([sub_out, const], axis=0)
-    fill = tf.fill(pack, tf.constant(0, dtype=tf.float32))
+    pack_op = tf.stack([sub_out, pack], axis=0)
+    fill = tf.fill(pack_op, tf.constant(0, dtype=tf.float32))
     concat = tf.concat([input1, fill], 0)
     output = tf.reshape(concat, input3)
     return output
@@ -76,17 +74,19 @@ class TestFusedEmbeddingPadding(unittest.TestCase):
             input1 = tf.compat.v1.placeholder(tf.float32, shape=input1_shape, name="input1")
             input2 = tf.compat.v1.placeholder(tf.int32, shape=(), name="input2")
             input3 = tf.compat.v1.placeholder(tf.int32, shape=(2,), name="input3")
+            pack = tf.compat.v1.placeholder(tf.int32, shape=(), name="input3")
             """Initialize test data"""
             feed = {
                 input0: np.array([6, input1_shape[1]]).astype(np.int64),
                 input1: np.random.rand(*input1_shape).astype(np.float),
                 input2: input1_shape[0],
                 input3: np.array(input3_shape).astype(np.int32),
+                pack: input1_shape[1],
             }
             with tf.name_scope("ori"):
-                out_ori = ori_padding_graph(input0, input1, input2, input3)
+                out_ori = ori_padding_graph(input0, input1, input2, input3, pack)
             with tf.name_scope("opt"):
-                out_opt = opt_padding_graph(input0, input1, input2, input3)
+                out_opt = opt_padding_graph(input0, input1, input2, input3, pack)
         
             # Create tf session
             with tf.compat.v1.Session(config=self.config) as sess:
@@ -126,17 +126,19 @@ class TestFusedEmbeddingPadding(unittest.TestCase):
             input1 = tf.compat.v1.placeholder(tf.float32, shape=input1_shape, name="input1")
             input2 = tf.compat.v1.placeholder(tf.int32, shape=(), name="input2")
             input3 = tf.compat.v1.placeholder(tf.int32, shape=(2,), name="input3")
+            pack = tf.compat.v1.placeholder(tf.int32, shape=(), name="pack")
             """Initialize test data"""
             feed = {
                 input0: np.array([6, input1_shape[1]]).astype(np.int64),
                 input1: np.random.rand(*input1_shape).astype(np.float),
                 input2: input1_shape[0],
                 input3: np.array(input3_shape).astype(np.int32),
+                pack: input1_shape[1],
             }
             with tf.name_scope("ori"):
-                out_ori = ori_padding_fast_graph(input0, input1, input2, input3)
+                out_ori = ori_padding_fast_graph(input0, input1, input2, input3, pack)
             with tf.name_scope("opt"):
-                out_opt = opt_padding_fast_graph(input0, input1, input2, input3)
+                out_opt = opt_padding_fast_graph(input0, input1, input2, input3, pack)
         
             # Create tf session
             with tf.compat.v1.Session(config=self.config) as sess:
