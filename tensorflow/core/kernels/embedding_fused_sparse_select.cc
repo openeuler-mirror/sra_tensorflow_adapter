@@ -16,22 +16,20 @@ limitations under the License.
 #include <vector>
 #include <algorithm>
 
-#include "tensorflow/core/framework/common_shape_fns.h"
-#include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
+#include "tensorflow/core/framework/tensor.h"
+#include "tensorflow/core/util/work_sharder.h"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
 #include "tensorflow/core/platform/logging.h"
 
 using namespace tensorflow;
 
 class KPFusedSparseSelect : public OpKernel {
- public:
+public:
   explicit KPFusedSparseSelect(OpKernelConstruction* context) : OpKernel(context) {
-
   }
 
   void Compute(OpKernelContext* context) override {
-
     const Tensor& input_a = context->input(0);
     const Tensor& input_b = context->input(1);
     const Tensor& input_c = context->input(2);
@@ -42,9 +40,9 @@ class KPFusedSparseSelect : public OpKernel {
     VLOG(1) << "input_a shape: " << input_a.shape().DebugString();
     VLOG(1) << "input_b shape: " << input_b.shape().DebugString();
     VLOG(1) << "input_c shape: " << input_c.shape().DebugString();
-    OP_REQUIRES(context,input_a.NumElements() == input_b.NumElements(),
+    OP_REQUIRES(context, input_a.NumElements() == input_b.NumElements(),
                 errors::InvalidArgument("Input num elements must match"));
-    OP_REQUIRES(context,input_a.NumElements() == input_c.NumElements(),
+    OP_REQUIRES(context, input_a.NumElements() == input_c.NumElements(),
                 errors::InvalidArgument("Input num elements must match"));
     auto N = input_a.NumElements();
 
@@ -52,59 +50,53 @@ class KPFusedSparseSelect : public OpKernel {
     Eigen::TensorMap<Eigen::Tensor<const int32_t, 2, Eigen::RowMajor>> b_reshaped_tensor(b_flat.data(), N, 1);
     Eigen::TensorMap<Eigen::Tensor<const int32_t, 2, Eigen::RowMajor>> c_reshaped_tensor(c_flat.data(), N, 1);
 
-    auto a_greater = (a_reshaped_tensor > 0);
-    auto a_greater_casted = a_greater.cast<float>();
-
-    auto b_equal_node0 = (b_reshaped_tensor == 4563);
-    auto b_equal_node1 = (b_reshaped_tensor == 10831);
-    
-    Eigen::Tensor<float,2, Eigen::RowMajor> tensor_ones(N, 1);
-    tensor_ones.setConstant(1.0f);
-
-    Eigen::Tensor<float,2, Eigen::RowMajor> tensor_zeros(N, 1);
-    tensor_zeros.setConstant(0.0f);
-
-    auto select_2412 = b_equal_node0.select(tensor_ones, a_greater_casted);
-    auto select_2415 = b_equal_node1.select(tensor_ones, select_2412);
-
-    auto sub_out = 1.0f - select_2415;
-    auto concat_out = select_2415.concatenate(tensor_ones, 1);
-
     Tensor* output_x = nullptr;
     Tensor* output_y = nullptr;
     Tensor* output_w = nullptr;
 
-    OP_REQUIRES_OK(context,
-                  context->allocate_output(0,TensorShape({N, 1}), &output_x));
-    OP_REQUIRES_OK(context,
-                  context->allocate_output(1,TensorShape({N, 1}), &output_y));
-    OP_REQUIRES_OK(context,
-                  context->allocate_output(2,TensorShape({N, 2}), &output_w));
+    OP_REQUIRES_OK(context, context->allocate_output(0, TensorShape({N, 1}), &output_x));
+    OP_REQUIRES_OK(context, context->allocate_output(1, TensorShape({N, 1}), &output_y));
+    OP_REQUIRES_OK(context, context->allocate_output(2, TensorShape({N, 2}), &output_w));
 
+    auto out_x = output_x->matrix<float>();  // [N,1]
+    auto out_y = output_y->matrix<float>();  // [N,1]
+    auto out_w = output_w->matrix<float>();  // [N,2]
+
+    auto worker_threads = context->device()->tensorflow_cpu_worker_threads();
+    const int64 cost_per_unit = 10;
+    
+    auto work = [&](int64 start, int64 end) {
+      for (int64 i = start; i < end; i++) {
+        float a_greater = (a_reshaped_tensor(i) > 0) ? 1.0f : 0.0f;
+        float select_2412 = (b_reshaped_tensor(i) == 4563) ? 1.0f : a_greater;
+        float select_2415 = (b_reshaped_tensor(i) == 10831) ? 1.0f : select_2412;
+        float sub_out = 1.0f - select_2415;
+        out_x(i, 0) = 0.0f; 
+        out_y(i, 0) = sub_out;
+        out_w(i, 0) = select_2415;
+        out_w(i, 1) = 1.0f;
+      }
+    };
+    Shard(worker_threads->num_threads, worker_threads->workers, N, cost_per_unit, work);
     
     Eigen::TensorMap<Eigen::Tensor<float, 2, Eigen::RowMajor>> map_output_x(
         output_x->flat<float>().data(),
         output_x->dim_size(0),
         output_x->dim_size(1)
     );
-    map_output_x = tensor_zeros;
 
     Eigen::TensorMap<Eigen::Tensor<float, 2, Eigen::RowMajor>> map_output_y(
         output_y->flat<float>().data(),
         output_y->dim_size(0),
         output_y->dim_size(1)
     );
-    map_output_y = sub_out;
 
     Eigen::TensorMap<Eigen::Tensor<float, 2, Eigen::RowMajor>> map_output_w(
         output_w->flat<float>().data(),
         output_w->dim_size(0),
         output_w->dim_size(1)
     );
-    map_output_w = concat_out;
-
   }
-
 };
 
 REGISTER_KERNEL_BUILDER(Name("KPFusedSparseSelect").Device(DEVICE_CPU),

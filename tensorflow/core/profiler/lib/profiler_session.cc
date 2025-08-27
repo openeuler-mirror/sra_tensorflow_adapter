@@ -156,7 +156,7 @@ ProfilerSession::ProfilerSession(const profiler::ProfilerOptions& options)
     return;
   }
 
-  LOG(INFO) << "Profiler session started.";
+  VLOG(1) << "Profiler session started.";
 
 #if !defined(IS_MOBILE_PLATFORM)
   CreateProfilers(options, &profilers_);

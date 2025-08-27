@@ -15,8 +15,6 @@ limitations under the License.
 
 #include <arm_neon.h>
 
-#include "tensorflow/core/framework/common_shape_fns.h"
-#include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "tensorflow/core/util/work_sharder.h"
@@ -25,7 +23,7 @@ using namespace tensorflow;
 
 template <typename Tidx>
 class KPFusedSparseSegmentReduceOp : public OpKernel {
- public:
+public:
   explicit KPFusedSparseSegmentReduceOp(OpKernelConstruction* context)
       : OpKernel(context) {
     int combiner_mode;
@@ -138,7 +136,7 @@ class KPFusedSparseSegmentReduceOp : public OpKernel {
     }
   }
 
- private:
+private:
   bool is_mean_;
 };
 

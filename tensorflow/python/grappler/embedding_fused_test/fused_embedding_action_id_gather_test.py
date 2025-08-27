@@ -1,9 +1,13 @@
-import tensorflow as tf
-import numpy as np
+# Copyright 2025 The Huawei Technologies Co. Authors. All Rights Reserved.
 import unittest
 
+import numpy as np
+import tensorflow as tf
+
 from tensorflow.python.ops import gen_embedding_fused_ops
-from utils.utils import perf_run, generate_timeline, wrapper_sess
+from utils.utils import benchmark_op
+
+np.random.seed(140)
 
 
 def ori_fused_embedding_action_id_gather_graph(input0, input1, input2, input3):
@@ -33,7 +37,7 @@ class TestFusedEmbeddingActionIdGather(unittest.TestCase):
         """Initialize config"""
         cls.config = tf.compat.v1.ConfigProto()
         cls.config.intra_op_parallelism_threads = 16
-        cls.config.inter_op_parallelism_threads = 16
+        cls.config.inter_op_parallelism_threads = 1
 
         cls.run_options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
         cls.run_metadata_ori = tf.compat.v1.RunMetadata()
@@ -68,23 +72,34 @@ class TestFusedEmbeddingActionIdGather(unittest.TestCase):
             # Create tf session
             with tf.compat.v1.Session(config=self.config) as sess:
                 # functest
-                out_ori_val = sess.run([out_ori], feed_dict=feed, options=self.run_options, run_metadata=self.run_metadata_ori)
-                out_opt_val = sess.run([out_opt], feed_dict=feed, options=self.run_options, run_metadata=self.run_metadata_opt)
+                out_ori_val = sess.run(
+                    [out_ori], feed_dict=feed, options=self.run_options, run_metadata=self.run_metadata_ori
+                )
+                out_opt_val = sess.run(
+                    [out_opt], feed_dict=feed, options=self.run_options, run_metadata=self.run_metadata_opt
+                )
 
                 np.testing.assert_array_equal(
                     out_ori_val,
                     out_opt_val,
                     err_msg="result mismatch"
                 )
+                
+                benchmark_op(
+                    sess,
+                    feed,
+                    [out_ori],
+                    [out_opt],
+                    self.run_options,
+                    self.run_metadata_ori,
+                    self.run_metadata_opt,
+                    op_name="KPFusedEmbeddingActionIdGather",
+                    start_op="ori/stack_1",
+                    end_op="ori/concat",
+                    num_runs=10000,
+                    tag="----------TF_origin-----------"
+                )
 
-                generate_timeline(self.run_metadata_ori.step_stats, f"{self._testMethodName}_ori")
-                generate_timeline(self.run_metadata_opt.step_stats, f"{self._testMethodName}_opt")
-
-                # perftest
-                perf_run(wrapper_sess(sess, [out_ori], feed_dict=feed), 
-                         wrapper_sess(sess, [out_opt], feed_dict=feed), 
-                         "KPFusedEmbeddingActionIdGather")
-        
 
 if __name__ == "__main__":
     tf.compat.v1.disable_eager_execution()
