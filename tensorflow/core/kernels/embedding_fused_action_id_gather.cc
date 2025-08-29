@@ -48,7 +48,6 @@ static void GatherV2Impl(OpKernelContext* context, const float* params_data, con
         temp_data + i * slice_size, params_data + idx * slice_size, sizeof(float) * slice_size
     );
   }
-  VLOG(1) << "temp value : " << temp->DebugString(100);
 }
 
 
@@ -64,13 +63,36 @@ public:
     const Tensor& indices2 = context->input(2);
     const Tensor& pack_dim = context->input(3);
 
+    const Tensor& pack = context->input(4);
+
     VLOG(1) << "indices1 shape: " << indices1.shape().DebugString();
     VLOG(1) << "params shape: " << params.shape().DebugString();
     VLOG(1) << "indices2 shape: " << indices2.shape().DebugString();
-    OP_REQUIRES(context, indices1.dims() <= 2, errors::InvalidArgument("indices1 dims must <= 2"));
-    OP_REQUIRES(context, indices2.dims() <= 2, errors::InvalidArgument("indices2 dims must <= 2"));
-    OP_REQUIRES(context, params.dims() == 2, errors::InvalidArgument("params dims must = 2"));
-    OP_REQUIRES(context, pack_dim.NumElements() == 1, errors::InvalidArgument("pack_dim NumElements must = 1"));
+    OP_REQUIRES(
+      context,
+      TensorShapeUtils::IsMatrix(indices1.shape()),
+      errors::InvalidArgument("indices1 dims must = 2")
+    );
+    OP_REQUIRES(
+      context,
+      TensorShapeUtils::IsMatrix(indices2.shape()),
+      errors::InvalidArgument("indices2 dims must = 2")
+    );
+    OP_REQUIRES(
+      context,
+      TensorShapeUtils::IsMatrix(params.shape()),
+      errors::InvalidArgument("params dims must = 2")
+    );
+    OP_REQUIRES(
+      context,
+      TensorShapeUtils::IsScalar(pack_dim.shape()),
+      errors::InvalidArgument("pack_dim is scalar")
+    );
+    OP_REQUIRES(
+      context,
+      TensorShapeUtils::IsScalar(pack.shape()),
+      errors::InvalidArgument("pack const is scalar")
+    );
 
     Tensor temp;
     GatherV2Impl<Tindices1>(context, params.flat<float>().data(), params.shape(), indices1.flat<Tindices1>().data(),
@@ -79,27 +101,26 @@ public:
     GatherV2Impl<Tindices2>(context, temp.flat<float>().data(), temp.shape(), indices2.flat<Tindices2>().data(),
         indices2.shape(), 0, &temp1);
     int pack_size = pack_dim.scalar<int32>()();
-    VLOG(1) << "pack_size value: " << pack_size;
+    int pack_const = pack.scalar<int32>()();
+    OP_REQUIRES(context, pack_size > 0, errors::InvalidArgument("pack_size must > 0"));
     int a_reshaped_cols = temp1.NumElements() / pack_size;
     auto a_reshaped = temp1.shaped<float, 2>({pack_size, a_reshaped_cols});
-    VLOG(1) << "a_reshaped_cols : " << a_reshaped_cols;
     Tensor* output;
-    int output_cols = a_reshaped_cols + 1680;
+    int output_cols = a_reshaped_cols + pack_const;
     OP_REQUIRES_OK(context,
                    context->allocate_output(0, TensorShape({pack_size, output_cols}), &output));
-    VLOG(1) << "output shape: " << output->shape().DebugString();
     auto a_reshaped_data = a_reshaped.data();
     auto worker_threads = context->device()->tensorflow_cpu_worker_threads();
-    const int64 cost_per_unit = a_reshaped_cols + 1680;
+    const int64 cost_per_unit = a_reshaped_cols + pack_const;
     auto work = [&](int64 start_row, int64 end_row) {
       float* base = output->matrix<float>().data();
       for (int64 row = start_row; row < end_row; ++row) {
-        float* dst_row = base + row * (a_reshaped_cols + 1680);
+        float* dst_row = base + row * (a_reshaped_cols + pack_const);
         std::memcpy(
             dst_row, a_reshaped_data + row * a_reshaped_cols, sizeof(float) * a_reshaped_cols
         );
         std::memset(
-            dst_row + a_reshaped_cols, 0, sizeof(float) * 1680
+            dst_row + a_reshaped_cols, 0, sizeof(float) * pack_const
         );
       }
     };

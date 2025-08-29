@@ -10,10 +10,10 @@ from utils.utils import benchmark_op
 np.random.seed(140)
 
 
-def ori_fused_embedding_action_id_gather_graph(input0, input1, input2, input3):
+def ori_fused_embedding_action_id_gather_graph(input0, input1, input2, input3, pack):
     gather1 = tf.gather(input1, input0, axis=0)
     gather2 = tf.gather(gather1, input2, axis=0)
-    pack1 = tf.stack([input3, 1680], axis=0)
+    pack1 = tf.stack([input3, pack], axis=0)
     pack2 = tf.stack([input3, -1], axis=0)
     reshape = tf.reshape(gather2, pack2)
     fill = tf.fill(pack1, tf.constant(0, dtype=tf.float32))
@@ -21,12 +21,13 @@ def ori_fused_embedding_action_id_gather_graph(input0, input1, input2, input3):
     return output
 
 
-def opt_fused_embedding_action_id_gather_graph(input0, input1, input2, input3):
+def opt_fused_embedding_action_id_gather_graph(input0, input1, input2, input3, pack):
     output = gen_embedding_fused_ops.KPFusedEmbeddingActionIdGather(
         input0=input0,
         input1=input1,
         input2=input2,
         input3=input3,
+        pack=pack,
     )
     return output
 
@@ -57,17 +58,19 @@ class TestFusedEmbeddingActionIdGather(unittest.TestCase):
             input1 = tf.compat.v1.placeholder(tf.float32, shape=params_shape, name="input_1")
             input2 = tf.compat.v1.placeholder(tf.int32, shape=indices2_shape, name="input_2")
             input3 = tf.compat.v1.placeholder(tf.int32, shape=[], name="input_3")
+            pack = tf.compat.v1.placeholder(tf.int32, shape=[], name="pack")
             """Initialize test data"""
             feed = {
                 input0: np.random.randint(0, params_shape[0], indices1_shape).astype(np.int64),
                 input1: np.random.random(params_shape).astype(np.float32),
                 input2: np.random.randint(0, indices1_shape[0], indices2_shape).astype(np.int32),
                 input3: params_shape[0],
+                pack: 1680,
             }
             with tf.name_scope("ori"):
-                out_ori = ori_fused_embedding_action_id_gather_graph(input0, input1, input2, input3)
+                out_ori = ori_fused_embedding_action_id_gather_graph(input0, input1, input2, input3, pack)
             with tf.name_scope("opt"):
-                out_opt = opt_fused_embedding_action_id_gather_graph(input0, input1, input2, input3)
+                out_opt = opt_fused_embedding_action_id_gather_graph(input0, input1, input2, input3, pack)
         
             # Create tf session
             with tf.compat.v1.Session(config=self.config) as sess:
