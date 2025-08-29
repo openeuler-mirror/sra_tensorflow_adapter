@@ -20,7 +20,7 @@ limitations under the License.
 using namespace tensorflow;
 
 class KPFusedGather : public OpKernel {
-public:
+ public:
   explicit KPFusedGather(OpKernelConstruction* context) : OpKernel(context) { }
 
   void Compute(OpKernelContext* context) override {
@@ -30,6 +30,7 @@ public:
 
     OP_REQUIRES(context, slice_input.dims() == 2, errors::Internal("slice_input dims must == 2"));
     OP_REQUIRES(context, data.dims() == 2, errors::Internal("indentity dims must == 2"));
+    OP_REQUIRES(context, data.dim_size(1) == 12, errors::Internal("indentity dim size must == [n, 12]"));
 
     VLOG(1) << "Input indentity shape: " << data.shape().DebugString();
     VLOG(1) << "Input slice_input shape: " << slice_input.shape().DebugString();
@@ -37,6 +38,7 @@ public:
     VLOG(1) << "Input begin value: " << begin.SummarizeValue(10);
 
     int32 col = begin.flat<int32>().data()[1];
+    OP_REQUIRES(context, col < slice_input.dim_size(1), errors::Internal("begin[1] must < slice_input.dim_size(1)"));
     auto data_mat = data.matrix<float>();
     auto slice_input_mat = slice_input.matrix<int64>();
 
@@ -82,6 +84,7 @@ public:
     int64_t cols = data.dim_size(1);
     for (int64_t cur_row = 0; cur_row < unique_values.size(); ++cur_row) {
         int64_t idx = unique_values[cur_row];
+        OP_REQUIRES(context, idx < data.dim_size(0), errors::Internal("idx must < data_row"));
         const float* src = data_mat.data() + idx * cols;
         float* dst = output_data.data() + cur_row * cols;
         std::memcpy(dst, src, cols * sizeof(float));
