@@ -4157,6 +4157,26 @@ cc_library(
     ]),
 )
 
+tf_cuda_cc_test(
+    name = "embedding_fused_padding_test",
+    size = "small",
+    srcs = if_enable_annc([
+        "embedding_fused_padding_test.cc",
+    ]),
+    deps = if_enable_annc([
+        ":embedding_fused_padding_op",
+        ":host_constant_op",
+        ":ops_testutil",
+        ":ops_util",
+        "//tensorflow/core:core_cpu",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:protos_all_cc",
+        "//tensorflow/core:test",
+        "//tensorflow/core:test_main",
+        "//tensorflow/core:testlib",
+    ]),
+)
 
 tf_kernel_library(
     name = "matmul_op",

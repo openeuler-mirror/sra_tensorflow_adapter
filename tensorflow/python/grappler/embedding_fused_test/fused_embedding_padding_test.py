@@ -68,20 +68,20 @@ class TestFusedEmbeddingPadding(unittest.TestCase):
     def tearDownClass(cls):
         return
     
-    def _run_kp_padding_test(self, input1_shape, input3_shape, num_runs=500):
+    def _run_kp_padding_test(self, input_shape, pooling_shape, reshape, num_runs=500):
         with tf.Graph().as_default():
             input0 = tf.compat.v1.placeholder(tf.int64, shape=(2,), name="input0")
-            input1 = tf.compat.v1.placeholder(tf.float32, shape=input1_shape, name="input1")
+            input1 = tf.compat.v1.placeholder(tf.float32, shape=pooling_shape, name="input1")
             input2 = tf.compat.v1.placeholder(tf.int32, shape=(), name="input2")
             input3 = tf.compat.v1.placeholder(tf.int32, shape=(2,), name="input3")
-            pack = tf.compat.v1.placeholder(tf.int32, shape=(), name="input3")
+            pack = tf.compat.v1.placeholder(tf.int32, shape=(), name="pack")
             """Initialize test data"""
             feed = {
-                input0: np.array([6, input1_shape[1]]).astype(np.int64),
-                input1: np.random.rand(*input1_shape).astype(np.float),
-                input2: input1_shape[0],
-                input3: np.array(input3_shape).astype(np.int32),
-                pack: input1_shape[1],
+                input0: np.array(input_shape).astype(np.int64),
+                input1: np.random.rand(*pooling_shape).astype(np.float),
+                input2: pooling_shape[0],
+                input3: np.array(reshape).astype(np.int32),
+                pack: pooling_shape[1],
             }
             with tf.name_scope("ori"):
                 out_ori = ori_padding_graph(input0, input1, input2, input3, pack)
@@ -120,20 +120,20 @@ class TestFusedEmbeddingPadding(unittest.TestCase):
                 )
 
 
-    def _run_kp_padding_fast_test(self, input1_shape, input3_shape, num_runs=500):
+    def _run_kp_padding_fast_test(self, input_shape, pooling_shape, reshape, num_runs=500):
         with tf.Graph().as_default():
             input0 = tf.compat.v1.placeholder(tf.int64, shape=(2,), name="input0")
-            input1 = tf.compat.v1.placeholder(tf.float32, shape=input1_shape, name="input1")
+            input1 = tf.compat.v1.placeholder(tf.float32, shape=pooling_shape, name="input1")
             input2 = tf.compat.v1.placeholder(tf.int32, shape=(), name="input2")
             input3 = tf.compat.v1.placeholder(tf.int32, shape=(2,), name="input3")
             pack = tf.compat.v1.placeholder(tf.int32, shape=(), name="pack")
             """Initialize test data"""
             feed = {
-                input0: np.array([6, input1_shape[1]]).astype(np.int64),
-                input1: np.random.rand(*input1_shape).astype(np.float),
-                input2: input1_shape[0],
-                input3: np.array(input3_shape).astype(np.int32),
-                pack: input1_shape[1],
+                input0: np.array(input_shape).astype(np.int64),
+                input1: np.random.rand(*pooling_shape).astype(np.float),
+                input2: pooling_shape[0],
+                input3: np.array(reshape).astype(np.int32),
+                pack: pooling_shape[1],
             }
             with tf.name_scope("ori"):
                 out_ori = ori_padding_fast_graph(input0, input1, input2, input3, pack)
@@ -172,25 +172,33 @@ class TestFusedEmbeddingPadding(unittest.TestCase):
                 )
 
     
-    def test_kp_padding_shape10(self):
-        input1_shape = (4, 10)
-        input3_shape = (-1, 20)
-        self._run_kp_padding_test(input1_shape, input3_shape, num_runs=100)
-
-    def test_kp_padding_shape12(self):
-        input1_shape = (1, 12)
-        input3_shape = (-1, 36)
-        self._run_kp_padding_test(input1_shape, input3_shape, num_runs=100)
+    def test_kp_padding_shape10_1(self):
+        input_shape = (151 * 1, 10)
+        pooling_shape = (151 * 1, 10)
+        reshape = (-1, 1510)
+        self._run_kp_padding_test(input_shape, pooling_shape, reshape, num_runs=100)
+        self._run_kp_padding_fast_test(input_shape, pooling_shape, reshape, num_runs=100)
     
-    def test_kp_padding_fast_shape10(self):
-        input1_shape = (4, 10)
-        input3_shape = (-1, 20)
-        self._run_kp_padding_fast_test(input1_shape, input3_shape, num_runs=100)
+    def test_kp_padding_shape10_2(self):
+        input_shape = (151 * 1000, 10)
+        pooling_shape = (151 * 10, 10)
+        reshape = (-1, 1510)
+        self._run_kp_padding_test(input_shape, pooling_shape, reshape, num_runs=100)
+        self._run_kp_padding_fast_test(input_shape, pooling_shape, reshape, num_runs=100)
 
-    def test_kp_padding_fast_shape12(self):
-        input1_shape = (1, 12)
-        input3_shape = (-1, 36)
-        self._run_kp_padding_fast_test(input1_shape, input3_shape, num_runs=100)
+    def test_kp_padding_shape12_1(self):
+        input_shape = (2 * 1, 12)
+        pooling_shape = (2 * 1, 12)
+        reshape = (-1, 24)
+        self._run_kp_padding_test(input_shape, pooling_shape, reshape, num_runs=100)
+        self._run_kp_padding_fast_test(input_shape, pooling_shape, reshape, num_runs=100)
+    
+    def test_kp_padding_shape12_2(self):
+        input_shape = (2 * 1000, 12)
+        pooling_shape = (2 * 10, 12)
+        reshape = (-1, 24)
+        self._run_kp_padding_test(input_shape, pooling_shape, reshape, num_runs=100)
+        self._run_kp_padding_fast_test(input_shape, pooling_shape, reshape, num_runs=100)
 
 
 if __name__ == "__main__":

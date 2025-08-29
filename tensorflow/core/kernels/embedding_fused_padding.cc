@@ -72,16 +72,17 @@ public:
     int output_cols = input.dim_size(1);
     OP_REQUIRES(context,
                 padding_rows >= 0,
-                errors::InvalidArgument("padding_rows must >= 0"));
+                errors::InvalidArgument("Pooling size(", input_rows_value,
+                ") is greater than Input size(", static_cast<int32>(origin_shape.flat<int64>()(0)), ")"));
     OP_REQUIRES(context,
                 reshape_cols > 0,
                 errors::InvalidArgument("reshape_cols must > 0"));
     OP_REQUIRES(context,
                 reshape_sizes.flat<int32>()(0) == -1,
-                errors::InvalidArgument("reshape first dim must be -1"));
+                errors::InvalidArgument("reshape[0] is not -1"));
     OP_REQUIRES(context,
                 pack.scalar<int32>()() == output_cols,
-                errors::InvalidArgument("pack must be output cols"));
+                errors::InvalidArgument("pack(", pack.scalar<int32>()(), ") is not equal to embedding dims"));
 
     Tensor* output0 = nullptr;
     Tensor* output1 = nullptr;
