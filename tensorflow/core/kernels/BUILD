@@ -4093,6 +4093,25 @@ tf_kernel_library(
     deps = MATH_DEPS,
 )
 
+tf_cc_test(
+    name = "embedding_fused_gather_test",
+    srcs = if_enable_annc([
+        "embedding_fused_gather_test.cc",
+    ]),
+    deps = [
+        ":ops_testutil",
+        ":ops_util",
+        ":embedding_fused_gather_op",
+        "//tensorflow/core:core_cpu",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:protos_all_cc",
+        "//tensorflow/core:test",
+        "//tensorflow/core:test_main",
+        "//tensorflow/core:testlib",
+    ],
+)
+
 tf_kernel_library(
     name = "embedding_fused_padding_op",
     srcs = if_enable_annc([
@@ -4119,6 +4138,25 @@ tf_kernel_library(
     ],
 )
 
+tf_cc_test(
+    name = "embedding_fused_sparse_reshape_test",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_reshape_test.cc",
+    ]),
+    deps = [
+        ":ops_testutil",
+        ":ops_util",
+        ":embedding_fused_reshape_op",
+        "//tensorflow/core:core_cpu",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:protos_all_cc",
+        "//tensorflow/core:test",
+        "//tensorflow/core:test_main",
+        "//tensorflow/core:testlib",
+    ],
+)
+
 tf_kernel_library(
     name = "embedding_fused_sparse_segment_reduce_op",
     srcs = if_enable_annc([
@@ -4141,6 +4179,25 @@ tf_kernel_library(
         "embedding_fused_sparse_select.cc",
     ]),
     deps = MATH_DEPS,
+)
+
+tf_cc_test(
+    name = "embedding_fused_sparse_select_test",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_select_test.cc",
+    ]),
+    deps = [
+        ":ops_testutil",
+        ":ops_util",
+        ":embedding_fused_sparse_select_op",
+        "//tensorflow/core:core_cpu",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:protos_all_cc",
+        "//tensorflow/core:test",
+        "//tensorflow/core:test_main",
+        "//tensorflow/core:testlib",
+    ],
 )
 
 cc_library(

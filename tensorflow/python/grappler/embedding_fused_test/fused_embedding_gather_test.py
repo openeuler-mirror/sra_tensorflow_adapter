@@ -98,7 +98,6 @@ class TestFusedGather(unittest.TestCase):
                     out_opt_val1,
                     err_msg="Segment count mismatch"
                 )
-
                 np.testing.assert_array_equal(
                     out_ori_val2,
                     out_opt_val2,
@@ -131,15 +130,25 @@ class TestFusedGather(unittest.TestCase):
     def test_kp_embedding_gather(self):
         base_data = np.linspace(0, 11, num=240, endpoint=False, dtype=np.float32).reshape(20, 12)
         base_slice_input = np.array([[0, 0], [0, 1], [1, 2]], dtype=np.int64)
-        base_begin = [0, 1]
+        base_begin = np.array([0, 1], dtype=np.int32)
         self._run_kp_gather_test((20, 12), (3, 2), base_data, base_slice_input, base_begin, num_runs=100)
 
+    def test_kp_gather_with_duplicates(self):
+        base_data = np.random.rand(100, 12).astype(np.float32)
+        base_slice_input = np.array([[5, 3], [7, 3], [9, 4], [5, 3]], dtype=np.int64)
+        base_begin = np.array([0, 1], dtype=np.int32)
+        self._run_kp_gather_test((100, 12), (4, 2), base_data, base_slice_input, base_begin, num_runs=100)
+        
+    def test_kp_gather_single_unique(self):
+        base_data = np.random.rand(50, 12).astype(np.float32)
+        base_slice_input = np.array([[10, 7], [20, 7], [30, 7]], dtype=np.int64)
+        base_begin = np.array([0, 1], dtype=np.int32)
+        self._run_kp_gather_test((50, 12), (3, 2), base_data, base_slice_input, base_begin, num_runs=100)
 
     def test_kp_gather_262145(self):
         base_data = np.linspace(0, 11111, num=262145*12, dtype=np.float32).reshape(262145, 12)
-        # base_slice_input = np.array([[0, 1]], dtype=np.int64)
         base_slice_input = np.random.randint(0, 262146, size=(46, 2), dtype=np.int64)
-        base_begin = [0, 0]
+        base_begin = np.array([0, 0], dtype=np.int32)
         self._run_kp_gather_test((262145, 12), (46, 2), base_data, base_slice_input, base_begin, num_runs=100)
     
 
