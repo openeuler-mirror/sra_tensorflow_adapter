@@ -25,7 +25,7 @@ using namespace tensorflow;
 
 template <typename Tidx>
 class KPFusedSparseSegmentReduceNonzeroOp : public OpKernel {
- public:
+public:
   explicit KPFusedSparseSegmentReduceNonzeroOp(OpKernelConstruction* context)
       : OpKernel(context) {
     int combiner_mode;
@@ -41,10 +41,18 @@ class KPFusedSparseSegmentReduceNonzeroOp : public OpKernel {
     const Tensor& slice_input = context->input(2);
     const Tensor& begin = context->input(3);
 
-    int64 num_indices = indices.dim_size(0);
-    int32 col = begin.flat<int32>().data()[1];
     OP_REQUIRES(context, input_tensor.dims() == 1,
                 errors::InvalidArgument("Input data must be a vector"));
+    OP_REQUIRES(context, slice_input.dims() == 2, errors::InvalidArgument("slice input must be 2-D"));
+    OP_REQUIRES(context, begin.NumElements() == 2,  errors::InvalidArgument("begin must have 2 elements"));
+
+    int64 num_indices = indices.dim_size(0);
+    int32 col = begin.flat<int32>().data()[1];
+    
+    OP_REQUIRES(context, col >= 0 && col < slice_input.dim_size(1), 
+                 errors::InvalidArgument("Column index out of range"));
+    OP_REQUIRES(context, num_indices <= slice_input.dim_size(0),
+                errors::InvalidArgument("indices out of range"));
 
     auto input_data = input_tensor.flat<float>();
     auto indices_vec = indices.vec<Tidx>();
