@@ -33,7 +33,19 @@ public:
     const Tensor& input_a = context->input(0);
     const Tensor& input_b = context->input(1);
     const Tensor& input_c = context->input(2);
+    const Tensor& greater = context->input(3); 
+    const Tensor& equal1 = context->input(4);
+    const Tensor& equal2 = context->input(5);
+    const Tensor& equal3 = context->input(6);
 
+    int32_t equal1_val = equal1.flat<int32_t>()(0);
+    int32_t equal2_val = equal2.flat<int32_t>()(0);
+    int32_t equal3_val = equal3.flat<int32_t>()(0);
+    VLOG(1) << "equal1_val: " << equal1_val;
+    VLOG(1) << "equal2_val: " << equal2_val;
+    VLOG(1) << "equal3_val: " << equal3_val;
+
+    int32_t greater_val = greater.flat<int32_t>()(0);
     auto a_flat = input_a.flat<int32_t>();
     auto b_flat = input_b.flat<int32_t>();
     auto c_flat = input_c.flat<int32_t>();
@@ -58,44 +70,40 @@ public:
     OP_REQUIRES_OK(context, context->allocate_output(1, TensorShape({N, 1}), &output_y));
     OP_REQUIRES_OK(context, context->allocate_output(2, TensorShape({N, 2}), &output_w));
 
-    auto out_x = output_x->matrix<float>();  // [N,1]
-    auto out_y = output_y->matrix<float>();  // [N,1]
-    auto out_w = output_w->matrix<float>();  // [N,2]
-
-    auto worker_threads = context->device()->tensorflow_cpu_worker_threads();
-    const int64 cost_per_unit = 10;
-    
-    auto work = [&](int64 start, int64 end) {
-      for (int64 i = start; i < end; i++) {
-        float a_greater = (a_reshaped_tensor(i) > 0) ? 1.0f : 0.0f;
-        float select_2412 = (b_reshaped_tensor(i) == 4563) ? 1.0f : a_greater;
-        float select_2415 = (b_reshaped_tensor(i) == 10831) ? 1.0f : select_2412;
-        float sub_out = 1.0f - select_2415;
-        out_x(i, 0) = 0.0f; 
-        out_y(i, 0) = sub_out;
-        out_w(i, 0) = select_2415;
-        out_w(i, 1) = 1.0f;
-      }
-    };
-    Shard(worker_threads->num_threads, worker_threads->workers, N, cost_per_unit, work);
-    
-    Eigen::TensorMap<Eigen::Tensor<float, 2, Eigen::RowMajor>> map_output_x(
+    Eigen::TensorMap<Eigen::Tensor<float, 2, Eigen::RowMajor>> out_x(
         output_x->flat<float>().data(),
         output_x->dim_size(0),
         output_x->dim_size(1)
     );
 
-    Eigen::TensorMap<Eigen::Tensor<float, 2, Eigen::RowMajor>> map_output_y(
+    Eigen::TensorMap<Eigen::Tensor<float, 2, Eigen::RowMajor>> out_y(
         output_y->flat<float>().data(),
         output_y->dim_size(0),
         output_y->dim_size(1)
     );
 
-    Eigen::TensorMap<Eigen::Tensor<float, 2, Eigen::RowMajor>> map_output_w(
+    Eigen::TensorMap<Eigen::Tensor<float, 2, Eigen::RowMajor>> out_w(
         output_w->flat<float>().data(),
         output_w->dim_size(0),
         output_w->dim_size(1)
     );
+
+    auto worker_threads = context->device()->tensorflow_cpu_worker_threads();
+    const int64 cost_per_unit = std::max(N / worker_threads->num_threads, int64(10));
+    
+    auto work = [&](int64 start, int64 end) {
+      for (int64 i = start; i < end; i++) {
+        // Greater(bool)+Cast.2406(float) --> 1.0f / 0.0f
+        float a_greater = (a_reshaped_tensor(i, 0) > greater_val) ? 1.0f : 0.0f;
+        float select_2412 = (b_reshaped_tensor(i, 0) == equal1_val) ? 1.0f : a_greater;  // Fill.2409-->1.0f
+        float select_2415 = (b_reshaped_tensor(i, 0) == equal2_val) ? 1.0f : select_2412;  // Fill.2409-->1.0f
+        out_x(i, 0) = a_reshaped_tensor(i, 0);  // Reshape.2401
+        out_y(i, 0) = select_2415;
+        out_w(i, 0) = select_2415;  // Mul.2419 硬编码 1.0f * input
+        out_w(i, 1) = 1.0f;  // select_2427被消除，直接使用Fill.2422-->1.0f
+      }
+    };
+    Shard(worker_threads->num_threads, worker_threads->workers, N, cost_per_unit, work);
   }
 };
 
