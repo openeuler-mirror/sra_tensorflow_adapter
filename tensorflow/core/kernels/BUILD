@@ -4110,6 +4110,26 @@ tf_kernel_library(
     deps = MATH_DEPS,
 )
 
+tf_cc_test(
+    name = "embedding_fused_sparse_dynamic_stitch_test",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_dynamic_stitch_test.cc",
+    ]),
+    deps = [
+        ":embedding_fused_sparse_dynamic_stitch_op",
+        ":host_constant_op",
+        ":ops_testutil",
+        ":ops_util",
+        "//tensorflow/core:core_cpu",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:protos_all_cc",
+        "//tensorflow/core:test",
+        "//tensorflow/core:test_main",
+        "//tensorflow/core:testlib",
+    ],
+)
+
 tf_kernel_library(
     name = "embedding_fused_reshape_op",
     srcs = if_enable_annc([
@@ -4128,12 +4148,52 @@ tf_kernel_library(
     deps = MATH_DEPS,
 )
 
+tf_cc_test(
+    name = "embedding_fused_sparse_segment_reduce_test",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_segment_reduce_test.cc",
+    ]),
+    deps = [
+        ":embedding_fused_sparse_segment_reduce_op",
+        ":host_constant_op",
+        ":ops_testutil",
+        ":ops_util",
+        "//tensorflow/core:core_cpu",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:protos_all_cc",
+        "//tensorflow/core:test",
+        "//tensorflow/core:test_main",
+        "//tensorflow/core:testlib",
+    ],
+)
+
 tf_kernel_library(
     name = "embedding_fused_sparse_segment_reduce_nonzero_op",
     srcs = if_enable_annc([
         "embedding_fused_sparse_segment_reduce_nonzero.cc",
     ]),
     deps = MATH_DEPS,
+)
+
+tf_cc_test(
+    name = "embedding_fused_sparse_segment_reduce_nonzero_test",
+    srcs = if_enable_annc([
+        "embedding_fused_sparse_segment_reduce_nonzero_test.cc",
+    ]),
+    deps = [
+        ":embedding_fused_sparse_segment_reduce_nonzero_op",
+        ":host_constant_op",
+        ":ops_testutil",
+        ":ops_util",
+        "//tensorflow/core:core_cpu",
+        "//tensorflow/core:framework",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:protos_all_cc",
+        "//tensorflow/core:test",
+        "//tensorflow/core:test_main",
+        "//tensorflow/core:testlib",
+    ],
 )
 
 tf_kernel_library(

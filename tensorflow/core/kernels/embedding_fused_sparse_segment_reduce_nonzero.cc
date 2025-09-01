@@ -51,8 +51,8 @@ public:
     
     OP_REQUIRES(context, col >= 0 && col < slice_input.dim_size(1), 
                  errors::InvalidArgument("Column index out of range"));
-    OP_REQUIRES(context, num_indices <= slice_input.dim_size(0),
-                errors::InvalidArgument("indices out of range"));
+    OP_REQUIRES(context, num_indices == slice_input.dim_size(0),
+                errors::InvalidArgument("indices and slice_input.dim_zie(0) should have same size"));
 
     auto input_data = input_tensor.flat<float>();
     auto indices_vec = indices.vec<Tidx>();
@@ -72,7 +72,7 @@ public:
     Tensor* output_shape = nullptr;
     OP_REQUIRES_OK(
         context, context->allocate_output(0, TensorShape({1}), &output_shape));
-    output_shape->flat<int64>()(0) = batch_size;
+    output_shape->flat<int32>()(0) = static_cast<int32>(batch_size);
 
     std::vector<std::pair<int64, float>> results(batch_size);
     int64 num_nonzero = 0;
@@ -86,8 +86,8 @@ public:
       auto counts_vec = counts.flat<int32>();
 
       for (int64 i = 0; i < num_indices; ++i) {
-        const int32 seg_id = slice_input_mat(i, col);
-        const int32 data_row = indices_vec(i);
+        const int64 seg_id = slice_input_mat(i, col);
+        const Tidx data_row = indices_vec(i);
         counts_vec(seg_id) += 1;
         temp_vec(seg_id) += input_data(data_row);
       }
@@ -104,8 +104,8 @@ public:
       }
     } else {
       for (int64 i = 0; i < num_indices; ++i) {
-        const int32 seg_id = slice_input_mat(i, col);
-        const int32 data_row = indices_vec(i);
+        const int64 seg_id = slice_input_mat(i, col);
+        const Tidx data_row = indices_vec(i);
         temp_vec(seg_id) += input_data(data_row);
       }
   
@@ -120,7 +120,7 @@ public:
     OP_REQUIRES_OK(context,
                    context->allocate_output(1, TensorShape({num_nonzero, 1}),
                                             &output_indices));
-    auto output_indices_data = output_indices->flat<int64>();
+    auto output_indices_data = output_indices->flat<int32>();
 
     Tensor* output_nonzero = nullptr;
     OP_REQUIRES_OK(context,
@@ -128,7 +128,7 @@ public:
                                             &output_nonzero));
     auto output_nonzero_data = output_nonzero->flat<float>();
     for (int64 i = 0; i < num_nonzero; ++i) {
-      output_indices_data(i) = results[i].first;
+      output_indices_data(i) = static_cast<int32>(results[i].first);
       output_nonzero_data(i) = results[i].second;
     }
 
