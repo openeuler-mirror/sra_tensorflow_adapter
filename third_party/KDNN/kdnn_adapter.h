@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "kdnn.hpp"
 #include "kdnn_threadpool.h"
+#include "tensorflow/core/util/matmul_bcast.h"
 
 namespace tensorflow {
 
@@ -34,12 +35,68 @@ inline void kdnnGemm(OpKernelContext* ctx, const Tensor& a, const Tensor& b, Ten
         ctx->device()
         ->tensorflow_cpu_worker_threads()
         ->workers;
-    kdnn::KDNNThreadPool eigen_tp(thread_pool);
+    kdnn::KDNNThreadPool kdnn_tp(thread_pool);
     const KDNN::TensorInfo srcInfo = {{m, k}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
     const KDNN::TensorInfo weightsInfo = {{k, n}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
     const KDNN::TensorInfo dstInfo = {{m, n}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
-    KDNN::Gemm gemm(srcInfo, weightsInfo, dstInfo, &eigen_tp);
+    KDNN::Gemm gemm(srcInfo, weightsInfo, dstInfo, &kdnn_tp);
     gemm.Run(A, B, C);
+}
+
+inline void kdnnParallelGemm(const OpKernelContext* ctx, const Tensor& a, const Tensor& b, Tensor* out,
+                     const MatMulBCast& bcast, int start, int end) {
+  const bool should_bcast = bcast.IsBroadcastingRequired();
+  const auto& x_batch_indices = bcast.x_batch_indices();
+  const auto& y_batch_indices = bcast.y_batch_indices();
+  int m = a.dim_size(1);
+  int n = b.dim_size(2);
+  int k = a.dim_size(2);
+  int stride_a = m * k;
+  int stride_b = k * n;
+  int stride_c = m * n;
+  const float *A = a.flat<float>().data();
+  const float *B = b.flat<float>().data();
+  float *C = out->flat<float>().data();
+  // intra_op thread_pool
+  thread::ThreadPool* thread_pool = 
+    ctx->device()
+    ->tensorflow_cpu_worker_threads()
+    ->workers;
+  kdnn::KDNNThreadPool kdnn_tp(thread_pool);
+  const KDNN::TensorInfo srcInfo = {{m, k}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
+  const KDNN::TensorInfo weightsInfo = {{k, n}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
+  const KDNN::TensorInfo dstInfo = {{m, n}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
+  KDNN::Gemm gemm(srcInfo, weightsInfo, dstInfo, &kdnn_tp);
+  for (int64_t i = start; i < end; ++i) {
+    const int64_t x_batch_index = should_bcast ? x_batch_indices[i] : i;
+    const int64_t y_batch_index = should_bcast ? y_batch_indices[i] : i;
+    gemm.Run(A + x_batch_index * stride_a, B + y_batch_index * stride_b, C + i * stride_c); 
+  }
+}
+
+inline void kdnnSeqGemm(const Tensor& a, const Tensor& b, Tensor* out,
+                    const MatMulBCast& bcast, int start, int end) {
+  const bool should_bcast = bcast.IsBroadcastingRequired();
+  const auto& x_batch_indices = bcast.x_batch_indices();
+  const auto& y_batch_indices = bcast.y_batch_indices();
+  int m = a.dim_size(1);
+  int n = b.dim_size(2);
+  int k = a.dim_size(2);
+  int stride_a = m * k;
+  int stride_b = k * n;
+  int stride_c = m * n;
+  const float *A = a.flat<float>().data();
+  const float *B = b.flat<float>().data();
+  float *C = out->flat<float>().data();
+  const KDNN::TensorInfo srcInfo = {{m, k}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
+  const KDNN::TensorInfo weightsInfo = {{k, n}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
+  const KDNN::TensorInfo dstInfo = {{m, n}, KDNN::Element::TypeT::F32, KDNN::Layout::AB};
+  KDNN::Gemm gemm(srcInfo, weightsInfo, dstInfo);
+  for (int64_t i = start; i < end; ++i) {
+    const int64_t x_batch_index = should_bcast ? x_batch_indices[i] : i;
+    const int64_t y_batch_index = should_bcast ? y_batch_indices[i] : i;
+    gemm.Run(A + x_batch_index * stride_a, B + y_batch_index * stride_b, C + i * stride_c); 
+  }
 }
 
 template<typename Tindices>
