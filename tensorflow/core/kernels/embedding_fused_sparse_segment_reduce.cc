@@ -53,8 +53,8 @@ public:
 
     OP_REQUIRES(context, col >= 0 && col < slice_input.dim_size(1), 
                  errors::InvalidArgument("Column index out of range"));
-    OP_REQUIRES(context, num_indices <= slice_input.dim_size(0),
-                errors::InvalidArgument("indices out of range"));
+    OP_REQUIRES(context, num_indices == slice_input.dim_size(0),
+                errors::InvalidArgument("indices and slice_input.dim_zie(0) should have same size"));
 
     auto input_data = input_tensor.matrix<float>().data();
     auto indices_vec = indices.vec<Tidx>();
@@ -90,8 +90,8 @@ public:
       auto counts_vec = counts.flat<int32>();
 
       for (int64 i = 0; i < num_indices; ++i) {
-        const int32 seg_id = slice_input_mat(i, col);
-        const int32 data_row = indices_vec(i);
+        const int64 seg_id = slice_input_mat(i, col);
+        const Tidx data_row = indices_vec(i);
         counts_vec(seg_id) += 1;
 
         float* output_row = output_data + seg_id * embedding_size;
@@ -131,8 +131,8 @@ public:
       }
     } else {
       for (int64 i = 0; i < num_indices; ++i) {
-        const int32 seg_id = slice_input_mat(i, col);
-        const int32 data_row = indices_vec(i);
+        const int64 seg_id = slice_input_mat(i, col);
+        const Tidx data_row = indices_vec(i);
 
         float* output_row = output_data + seg_id * embedding_size;
         const float* input_data_row = input_data + data_row * embedding_size;

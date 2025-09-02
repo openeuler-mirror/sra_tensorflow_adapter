@@ -69,7 +69,7 @@ public:
         const int64_t global_id = x_flat(i);
         const int64_t table_id = global_id % num_partitions;
         const int64_t row_id = global_id / num_partitions;
-        
+
         OP_REQUIRES(context, row_id < variable_rows[table_id], errors::InvalidArgument(
           "row_id out of range."));
 

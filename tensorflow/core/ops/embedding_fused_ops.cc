@@ -45,8 +45,8 @@ REGISTER_OP("KPFusedSparseSegmentReduceNonzero")
     .Input("begin: int32")
     .Attr("combiner: int = 1")  // 0 for SUM, 1 for MEAN
     .Attr("Tidx: {int32, int64} = DT_INT32")
-    .Output("output_shape: int64")
-    .Output("output_indices: int64")
+    .Output("output_shape: int32")
+    .Output("output_indices: int32")
     .Output("output_nonzero: float")
     .SetShapeFn(shape_inference::UnknownShape);
 
