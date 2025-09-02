@@ -157,39 +157,37 @@ class KPFusedSparseReshapeOp : public OpKernel {
 
     OP_REQUIRES(context, slice_input.dims() == 2, errors::Internal("slice_input dims must == 2"));
     OP_REQUIRES(context, new_shape.dim_size(0) == 2, errors::Internal("new_shape dim size must == 2"));
+    OP_REQUIRES(context, pack_const.dims() == 0, 
+                errors::InvalidArgument("pack_const must be a scalar"));
     VLOG(1) << "Input slice_input shape: " << slice_input.shape().DebugString();
     VLOG(1) << "Input begin value: " << begin.DebugString();
     VLOG(1) << "Input new_shape value: " << new_shape.DebugString();
 
+    OP_REQUIRES(context, begin.dims() == 1 && begin.dim_size(0) == 2,
+                errors::InvalidArgument("begin must be 1D with at least 2 elements"));
     int32 col = begin.flat<int32>().data()[1];
     OP_REQUIRES(context, col < slice_input.dim_size(1), errors::Internal("begin[1] must < slice_input.dim_size(1)"));
-    int64_t stridedslice57_out = slice_input.dim_size(0);
+    int64_t num_rows = slice_input.dim_size(0);
     auto slice_input_mat = slice_input.matrix<int64>();
 
-    VLOG(1) << "stridedslice57_out: " << stridedslice57_out;
+    VLOG(1) << "num_rows: " << num_rows;
     VLOG(1) << "slice_input.dim_size(0): " << slice_input.dim_size(0);
     VLOG(1) << "slice_input.dim_size(1): " << slice_input.dim_size(1);
-    OP_REQUIRES(context, stridedslice57_out == slice_input.dim_size(0), errors::Internal("concat shape mismatch"));
     VLOG(1) << "Column index from begin: " << col;
-    VLOG(1) << "indices size: " << stridedslice57_out;
 
     Tensor shape_in(DT_INT64, TensorShape({2}));
     auto tensor_flat = shape_in.flat<int64>();
-    tensor_flat(0) = stridedslice57_out;
-    tensor_flat(1) = pack_const.flat<int64>().data()[0];
+    tensor_flat(0) = num_rows;
+    tensor_flat(1) = pack_const.scalar<int64>()();
     
-    Tensor indices_in(DT_INT64, TensorShape({stridedslice57_out, 2}));
+    Tensor indices_in(DT_INT64, TensorShape({num_rows, 2}));
     auto indices_in_mat = indices_in.matrix<int64>();
-    for (int i = 0; i < stridedslice57_out; ++i) {
+    for (int i = 0; i < num_rows; ++i) {
         indices_in_mat(i, 0) = i;
         indices_in_mat(i, 1) = slice_input_mat(i, col);
     }
 
-    Tensor new_shape_in(DT_INT64, TensorShape({2}));
-    auto newshape_tensor_flat = new_shape_in.flat<int64>();
-    newshape_tensor_flat(0) = new_shape.flat<int64>()(0);
-    newshape_tensor_flat(1) = new_shape.flat<int64>()(1);
-    ReshapeKp(context, indices_in, shape_in, new_shape_in, 0, 1);
+    ReshapeKp(context, indices_in, shape_in, new_shape, 0, 1);
   }
 };
 

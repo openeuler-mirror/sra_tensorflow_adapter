@@ -55,7 +55,7 @@ class KPFusedSparseReshapeTest : public OpsTestBase {
     AddInputFromArray<int64>(slice_shape, slice_data);
     AddInputFromArray<int32>(TensorShape({2}), begin_val);
     AddInputFromArray<int64>(TensorShape({2}), new_shape_val);
-    AddInputFromArray<int64>(TensorShape({1}), pack_const_val);
+    AddInputFromArray<int64>(TensorShape({}), pack_const_val);
 
     TF_ASSERT_OK(RunOpKernel());
 
@@ -85,9 +85,9 @@ class KPFusedSparseReshapeTest : public OpsTestBase {
     TF_CHECK_OK(InitOp());
 
     AddInputFromArray<int64>(slice_shape, slice_data);
-    AddInputFromArray<int32>(TensorShape({2}), begin_val);
+    AddInputFromArray<int32>(TensorShape({static_cast<int64>(begin_val.size())}), begin_val);
     AddInputFromArray<int64>(TensorShape({static_cast<int64>(new_shape_val.size())}), new_shape_val);
-    AddInputFromArray<int64>(TensorShape({1}), pack_const_val);
+    AddInputFromArray<int64>(TensorShape({}), pack_const_val);
 
     return RunOpKernel();
   }
@@ -230,6 +230,51 @@ TEST_F(KPFusedSparseReshapeTest, Invalid_ProductZeroWithUnknownDim) {
       {2});
   EXPECT_FALSE(s.ok());
   EXPECT_TRUE(s.error_message().find("reshape cannot infer the missing input size for an empty tensor") != std::string::npos)
+      << "Actual error: " << s.error_message();
+}
+
+// 反例9：begin 是 1D 但长度为 1（不够 2 个元素）
+TEST_F(KPFusedSparseReshapeTest, Invalid_BeginRank1ButSize1) {
+  Status s = RunOpExpectFailure(
+      TensorShape({2, 2}), {0, 1, 1, 0},
+      {0},                // begin = [0]，长度为 1
+      {2, 2},
+      {2});
+  EXPECT_FALSE(s.ok());
+  EXPECT_TRUE(s.error_message().find("begin must be 1D with at least 2 elements") != std::string::npos)
+      << "Actual error: " << s.error_message();
+}
+
+// 反例10：begin 是 1D 但长度为 3（超过 2）
+TEST_F(KPFusedSparseReshapeTest, Invalid_BeginRank1ButSize3) {
+  Status s = RunOpExpectFailure(
+      TensorShape({2, 2}), {0, 1, 1, 0},
+      {0, 1, 2},          // begin = [0,1,2]，长度为 3
+      {2, 2},
+      {2});
+  EXPECT_FALSE(s.ok());
+  EXPECT_TRUE(s.error_message().find("begin must be 1D with at least 2 elements") != std::string::npos)
+      << "Actual error: " << s.error_message();
+}
+
+// 反例11：pack_const 是标量（0维）
+TEST_F(KPFusedSparseReshapeTest, Invalid_PackConstIsScalarButExpect1D) {
+  TF_CHECK_OK(NodeDefBuilder("kp_fused_sparse_reshape", "KPFusedSparseReshape")
+                  .Input(FakeInput(DT_INT64))   // slice_input
+                  .Input(FakeInput(DT_INT32))   // begin
+                  .Input(FakeInput(DT_INT64))   // new_shape
+                  .Input(FakeInput(DT_INT64))   // pack_const
+                  .Finalize(node_def()));
+  TF_CHECK_OK(InitOp());
+
+  AddInputFromArray<int64>(TensorShape({2, 2}), {0, 1, 1, 0});
+  AddInputFromArray<int32>(TensorShape({2}), {0, 1});
+  AddInputFromArray<int64>(TensorShape({2}), {2, 2});
+  AddInputFromArray<int64>(TensorShape({1}), {1});  // pack_const = 标量 1（0维）
+
+  Status s = RunOpKernel();
+  EXPECT_FALSE(s.ok());
+  EXPECT_TRUE(s.error_message().find("pack_const must be a scalar") != std::string::npos)
       << "Actual error: " << s.error_message();
 }
 
