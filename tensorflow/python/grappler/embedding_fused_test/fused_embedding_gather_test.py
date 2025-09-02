@@ -19,16 +19,12 @@ def ori_fused_embedding_gather_graph(data, slice_input, begin):
         shrink_axis_mask=2
     )
     
-    slice_out, slice_out_indices = tf.unique(slice_out)
-    output_shape = slice_out
-    slice_out = tf.reshape(slice_out, [-1])
-    slice_out, slice_out_indices2 = tf.unique(slice_out)
-
-    gather1_result = tf.gather(data, slice_out)
-    gather1_result = tf.reshape(gather1_result, [-1, 12])
-
-    gather2_result = tf.gather(gather1_result, slice_out_indices2)
-    return output_shape, slice_out_indices, gather2_result
+    value, indices = tf.unique(slice_out)
+    value = tf.reshape(value, [-1])
+    value_1, indices_1 = tf.unique(value)
+    gather1 = tf.gather(data, value_1)
+    gather2 = tf.gather(gather1, indices_1)
+    return value, indices, gather2
 
 
 def opt_fused_embedding_gather_graph(data, slice_input, begin):
