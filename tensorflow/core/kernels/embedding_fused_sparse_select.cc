@@ -53,9 +53,9 @@ public:
     VLOG(1) << "input_b shape: " << input_b.shape().DebugString();
     VLOG(1) << "input_c shape: " << input_c.shape().DebugString();
     OP_REQUIRES(context, input_a.NumElements() == input_b.NumElements(),
-                errors::InvalidArgument("Input num elements must match"));
+                errors::InvalidArgument("Input num elements of a and b must match"));
     OP_REQUIRES(context, input_a.NumElements() == input_c.NumElements(),
-                errors::InvalidArgument("Input num elements must match"));
+                errors::InvalidArgument("Input num elements of a and c must match"));
     auto N = input_a.NumElements();
 
     Eigen::TensorMap<Eigen::Tensor<const int32_t, 2, Eigen::RowMajor>> a_reshaped_tensor(a_flat.data(), N, 1);

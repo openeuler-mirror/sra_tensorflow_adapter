@@ -29,10 +29,10 @@ class KPFusedGather : public OpKernel {
     const Tensor& begin = context->input(2);
 
     OP_REQUIRES(context, slice_input.dims() == 2, errors::Internal("slice_input dims must == 2"));
-    OP_REQUIRES(context, data.dims() == 2, errors::Internal("indentity dims must == 2"));
-    OP_REQUIRES(context, data.dim_size(1) == 12, errors::Internal("indentity dim size must == [n, 12]"));
+    OP_REQUIRES(context, data.dims() == 2, errors::Internal("identity dims must == 2"));
+    OP_REQUIRES(context, data.dim_size(1) == 12, errors::Internal("identity dim size must == [n, 12]"));
 
-    VLOG(1) << "Input indentity shape: " << data.shape().DebugString();
+    VLOG(1) << "Input identity shape: " << data.shape().DebugString();
     VLOG(1) << "Input slice_input shape: " << slice_input.shape().DebugString();
     VLOG(1) << "Input slice_input: " << slice_input.SummarizeValue(1000);
     VLOG(1) << "Input begin value: " << begin.SummarizeValue(10);
@@ -73,18 +73,17 @@ class KPFusedGather : public OpKernel {
                    context->allocate_output(
                    1, TensorShape({static_cast<int32>(indices.size())}), &out_indices));
     std::memcpy(out_indices->data(), indices.data(), indices.size() * sizeof(int32_t));
-    OP_REQUIRES(context, data.dim_size(1) * unique_values.size() % 12 == 0,
-                errors::Internal("cannot reshape to [-1, 12]"));
 
     OP_REQUIRES_OK(context,
                    context->allocate_output(
-                   2, TensorShape({unique_values.size(), 12}), &out_data));
+                   2, TensorShape({unique_values.size(), data.dim_size(1)}), &out_data));
     auto output_data = out_data->matrix<float>();
 
+    int64_t data_row = data.dim_size(0);
     int64_t cols = data.dim_size(1);
     for (int64_t cur_row = 0; cur_row < unique_values.size(); ++cur_row) {
         int64_t idx = unique_values[cur_row];
-        OP_REQUIRES(context, idx < data.dim_size(0), errors::Internal("idx must < data_row"));
+        OP_REQUIRES(context, idx < data_row, errors::Internal("idx must < data_row"));
         const float* src = data_mat.data() + idx * cols;
         float* dst = output_data.data() + cur_row * cols;
         std::memcpy(dst, src, cols * sizeof(float));
