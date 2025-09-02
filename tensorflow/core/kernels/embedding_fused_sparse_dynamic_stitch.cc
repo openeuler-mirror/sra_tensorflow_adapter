@@ -35,7 +35,8 @@ public:
 
     const int num_inputs = context->num_inputs();
     const int num_partitions = num_inputs - 1;
-    int output_stride = 0;
+    OP_REQUIRES(context, num_partitions > 1, errors::InvalidArgument("num partitions must > 1"));
+    int64_t output_stride = 0;
     std::vector<const float*> variables(num_partitions);
     std::vector<int64_t> variable_rows(num_partitions);
     for (int i = 1; i < num_inputs; ++i) {
@@ -60,11 +61,10 @@ public:
     float* output = (float*)output_tensor->tensor_data().data();
 
     const size_t copy_size = output_stride * sizeof(float);
-    auto worker_threads = context->device()->tensorflow_cpu_worker_threads();
-    const int64 cost_per_unit = 1000 * num_elems;
-    auto work = [&](int start, int end) {
-      const size_t copy_size = output_stride * sizeof(float);
 
+    auto worker_threads = context->device()->tensorflow_cpu_worker_threads();
+    const int64 cost_per_unit = 120; // Actual single cycle execution time 
+    auto work = [&](int start, int end) {
       for (int i = start; i < end; ++i) {
         const int64_t global_id = x_flat(i);
         const int64_t table_id = global_id % num_partitions;
