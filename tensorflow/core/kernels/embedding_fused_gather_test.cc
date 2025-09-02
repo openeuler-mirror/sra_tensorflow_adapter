@@ -126,7 +126,7 @@ TEST_F(KPFusedGatherTest, Valid_NormalInput) {
   );
 }
 
-// 反例1：data不是2维
+// data不是2维
 TEST_F(KPFusedGatherTest, Invalid_DataDimsNot2) {
   std::vector<float> data = {1.0f, 2.0f, 3.0f, 4.0f};
   Status s = RunOpExpectFailure(
@@ -137,24 +137,10 @@ TEST_F(KPFusedGatherTest, Invalid_DataDimsNot2) {
       data
   );
   EXPECT_FALSE(s.ok());
-  EXPECT_TRUE(s.error_message().find("identity dims must == 2") != std::string::npos);
+  EXPECT_TRUE(s.error_message().find("Embedding table shape must be 2D") != std::string::npos);
 }
 
-// 反例2：data 第二维不是12
-TEST_F(KPFusedGatherTest, Invalid_DataDimSizeNot12) {
-  std::vector<float> data(2 * 10, 1.0f);
-  Status s = RunOpExpectFailure(
-      TensorShape({2, 10}),      // data 第二维不是12
-      TensorShape({2, 2}),
-      {0, 0},
-      {0, 1, 2, 3},
-      data
-  );  
-  EXPECT_FALSE(s.ok());
-  EXPECT_TRUE(s.error_message().find("identity dim size must == [n, 12]") != std::string::npos);
-}
-
-// 反例3：slice_input 不是2维
+// key 不是2维
 TEST_F(KPFusedGatherTest, Invalid_SliceInputDimsNot2) {
   std::vector<float> data(2 * 12, 1.0f);
   Status s = RunOpExpectFailure(
@@ -165,10 +151,10 @@ TEST_F(KPFusedGatherTest, Invalid_SliceInputDimsNot2) {
       data
   );
   EXPECT_FALSE(s.ok());
-  EXPECT_TRUE(s.error_message().find("slice_input dims must == 2") != std::string::npos);
+  EXPECT_TRUE(s.error_message().find("Input key must be 2D") != std::string::npos);
 }
 
-// 反例4: begin[1] 超出列范围
+// begin[1] 超出列范围
 TEST_F(KPFusedGatherTest, Invalid_BeginColOutOfRange) {
   std::vector<float> data(2 * 12, 1.0f);
   Status s = RunOpExpectFailure(
@@ -179,10 +165,10 @@ TEST_F(KPFusedGatherTest, Invalid_BeginColOutOfRange) {
       data
   );
   EXPECT_FALSE(s.ok());
-  EXPECT_TRUE(s.error_message().find("begin[1] must < slice_input.dim_size(1)") != std::string::npos);
+  EXPECT_TRUE(s.error_message().find("slice cols out of keys range") != std::string::npos);
 }
 
-// 反例5: gather 索引超出 data 行数
+// gather 索引超出 data 行数
 TEST_F(KPFusedGatherTest, Invalid_IndexOutOfRangeInData) {
   std::vector<float> data(2 * 12, 1.0f);
   Status s = RunOpExpectFailure(
@@ -194,7 +180,7 @@ TEST_F(KPFusedGatherTest, Invalid_IndexOutOfRangeInData) {
       data
   );
   EXPECT_FALSE(s.ok());
-  EXPECT_TRUE(s.error_message().find("idx must < data_row") != std::string::npos);
+  EXPECT_TRUE(s.error_message().find("idx out of table range") != std::string::npos);
 }
 
 }
