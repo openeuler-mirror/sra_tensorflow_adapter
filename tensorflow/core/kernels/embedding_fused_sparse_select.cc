@@ -95,11 +95,11 @@ public:
       for (int64 i = start; i < end; i++) {
         // Greater(bool)+Cast.2406(float) --> 1.0f / 0.0f
         float a_greater = (a_reshaped_tensor(i, 0) > greater_val) ? 1.0f : 0.0f;
-        float select_2412 = (b_reshaped_tensor(i, 0) == equal1_val) ? 1.0f : a_greater;  // Fill.2409-->1.0f
-        float select_2415 = (b_reshaped_tensor(i, 0) == equal2_val) ? 1.0f : select_2412;  // Fill.2409-->1.0f
+        float res_equal1 = (b_reshaped_tensor(i, 0) == equal1_val) ? 1.0f : a_greater;  // Fill.2409-->1.0f
+        float res_equal2 = (b_reshaped_tensor(i, 0) == equal2_val) ? 1.0f : res_equal1;  // Fill.2409-->1.0f
         out_x(i, 0) = a_reshaped_tensor(i, 0);  // Reshape.2401
-        out_y(i, 0) = select_2415;
-        out_w(i, 0) = select_2415;  // Mul.2419 硬编码 1.0f * input
+        out_y(i, 0) = res_equal2;
+        out_w(i, 0) = res_equal2;  // Mul.2419 硬编码 1.0f * input
         out_w(i, 1) = 1.0f;  // select_2427被消除，直接使用Fill.2422-->1.0f
       }
     };
