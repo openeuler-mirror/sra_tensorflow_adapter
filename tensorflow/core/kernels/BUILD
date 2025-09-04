@@ -4094,25 +4094,6 @@ tf_kernel_library(
     deps = MATH_DEPS,
 )
 
-tf_cc_test(
-    name = "embedding_fused_gather_test",
-    srcs = if_enable_annc([
-        "embedding_fused_gather_test.cc",
-    ]),
-    deps = [
-        ":ops_testutil",
-        ":ops_util",
-        ":embedding_fused_gather_op",
-        "//tensorflow/core:core_cpu",
-        "//tensorflow/core:framework",
-        "//tensorflow/core:lib",
-        "//tensorflow/core:protos_all_cc",
-        "//tensorflow/core:test",
-        "//tensorflow/core:test_main",
-        "//tensorflow/core:testlib",
-    ],
-)
-
 tf_kernel_library(
     name = "embedding_fused_padding_op",
     srcs = if_enable_annc([
@@ -4129,26 +4110,6 @@ tf_kernel_library(
     deps = MATH_DEPS,
 )
 
-tf_cc_test(
-    name = "embedding_fused_sparse_dynamic_stitch_test",
-    srcs = if_enable_annc([
-        "embedding_fused_sparse_dynamic_stitch_test.cc",
-    ]),
-    deps = [
-        ":embedding_fused_sparse_dynamic_stitch_op",
-        ":host_constant_op",
-        ":ops_testutil",
-        ":ops_util",
-        "//tensorflow/core:core_cpu",
-        "//tensorflow/core:framework",
-        "//tensorflow/core:lib",
-        "//tensorflow/core:protos_all_cc",
-        "//tensorflow/core:test",
-        "//tensorflow/core:test_main",
-        "//tensorflow/core:testlib",
-    ],
-)
-
 tf_kernel_library(
     name = "embedding_fused_reshape_op",
     srcs = if_enable_annc([
@@ -4156,25 +4117,6 @@ tf_kernel_library(
     ]),
     deps = MATH_DEPS + [
         ":reshape_util",
-    ],
-)
-
-tf_cc_test(
-    name = "embedding_fused_sparse_reshape_test",
-    srcs = if_enable_annc([
-        "embedding_fused_sparse_reshape_test.cc",
-    ]),
-    deps = [
-        ":ops_testutil",
-        ":ops_util",
-        ":embedding_fused_reshape_op",
-        "//tensorflow/core:core_cpu",
-        "//tensorflow/core:framework",
-        "//tensorflow/core:lib",
-        "//tensorflow/core:protos_all_cc",
-        "//tensorflow/core:test",
-        "//tensorflow/core:test_main",
-        "//tensorflow/core:testlib",
     ],
 )
 
@@ -4186,26 +4128,6 @@ tf_kernel_library(
     deps = MATH_DEPS,
 )
 
-tf_cc_test(
-    name = "embedding_fused_sparse_segment_reduce_test",
-    srcs = if_enable_annc([
-        "embedding_fused_sparse_segment_reduce_test.cc",
-    ]),
-    deps = [
-        ":embedding_fused_sparse_segment_reduce_op",
-        ":host_constant_op",
-        ":ops_testutil",
-        ":ops_util",
-        "//tensorflow/core:core_cpu",
-        "//tensorflow/core:framework",
-        "//tensorflow/core:lib",
-        "//tensorflow/core:protos_all_cc",
-        "//tensorflow/core:test",
-        "//tensorflow/core:test_main",
-        "//tensorflow/core:testlib",
-    ],
-)
-
 tf_kernel_library(
     name = "embedding_fused_sparse_segment_reduce_nonzero_op",
     srcs = if_enable_annc([
@@ -4214,51 +4136,12 @@ tf_kernel_library(
     deps = MATH_DEPS,
 )
 
-tf_cc_test(
-    name = "embedding_fused_sparse_segment_reduce_nonzero_test",
-    srcs = if_enable_annc([
-        "embedding_fused_sparse_segment_reduce_nonzero_test.cc",
-    ]),
-    deps = [
-        ":embedding_fused_sparse_segment_reduce_nonzero_op",
-        ":host_constant_op",
-        ":ops_testutil",
-        ":ops_util",
-        "//tensorflow/core:core_cpu",
-        "//tensorflow/core:framework",
-        "//tensorflow/core:lib",
-        "//tensorflow/core:protos_all_cc",
-        "//tensorflow/core:test",
-        "//tensorflow/core:test_main",
-        "//tensorflow/core:testlib",
-    ],
-)
-
 tf_kernel_library(
     name = "embedding_fused_sparse_select_op",
     srcs = if_enable_annc([
         "embedding_fused_sparse_select.cc",
     ]),
     deps = MATH_DEPS,
-)
-
-tf_cc_test(
-    name = "embedding_fused_sparse_select_test",
-    srcs = if_enable_annc([
-        "embedding_fused_sparse_select_test.cc",
-    ]),
-    deps = [
-        ":ops_testutil",
-        ":ops_util",
-        ":embedding_fused_sparse_select_op",
-        "//tensorflow/core:core_cpu",
-        "//tensorflow/core:framework",
-        "//tensorflow/core:lib",
-        "//tensorflow/core:protos_all_cc",
-        "//tensorflow/core:test",
-        "//tensorflow/core:test_main",
-        "//tensorflow/core:testlib",
-    ],
 )
 
 cc_library(
@@ -4275,17 +4158,22 @@ cc_library(
     ]),
 )
 
-tf_cuda_cc_test(
-    name = "embedding_fused_padding_test",
+tf_cc_test(
+    name = "embedding_fused_ops_test",
     size = "small",
     srcs = if_enable_annc([
+        "embedding_fused_sparse_dynamic_stitch_test.cc",
+        "embedding_fused_sparse_segment_reduce_test.cc",
+        "embedding_fused_sparse_segment_reduce_nonzero_test.cc",
         "embedding_fused_padding_test.cc",
+        "embedding_fused_sparse_select_test.cc",
+        "embedding_fused_gather_test.cc",
+        "embedding_fused_sparse_reshape_test.cc",
     ]),
-    deps = if_enable_annc([
-        ":embedding_fused_padding_op",
-        ":host_constant_op",
+    deps = [
         ":ops_testutil",
         ":ops_util",
+        ":embedding_fused_ops",
         "//tensorflow/core:core_cpu",
         "//tensorflow/core:framework",
         "//tensorflow/core:lib",
@@ -4293,7 +4181,7 @@ tf_cuda_cc_test(
         "//tensorflow/core:test",
         "//tensorflow/core:test_main",
         "//tensorflow/core:testlib",
-    ]),
+    ],
 )
 
 tf_kernel_library(
